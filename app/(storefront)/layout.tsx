@@ -1,0 +1,16 @@
+import { Navbar } from "@/components/storefront/navbar"
+import { Footer } from "@/components/storefront/footer"
+
+export default function StorefrontLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <div className="min-h-screen flex flex-col bg-[#0a0a08] text-[#f5f0e8]">
+      <Navbar />
+      <main className="flex-1">{children}</main>
+      <Footer />
+    </div>
+  )
+}
