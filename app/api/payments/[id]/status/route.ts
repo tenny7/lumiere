@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getPaymentStatus } from "@/lib/momo/client"
-import { resend, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/resend/client"
+import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
 
 export async function GET(
@@ -154,7 +154,7 @@ export async function GET(
             },
         })
 
-        await resend.emails.send({
+        await sendMail({
           from: EMAIL_FROM,
           replyTo: EMAIL_REPLY_TO,
           to: user.email!,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { resend, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/resend/client"
+import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { z } from "zod"
 
 const contactSchema = z.object({
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Notify the store inbox (best-effort).
     try {
-      await resend.emails.send({
+      await sendMail({
         from: EMAIL_FROM,
         replyTo: email,
         to: EMAIL_REPLY_TO,

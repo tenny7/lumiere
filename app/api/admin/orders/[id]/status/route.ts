@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { resend, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/resend/client"
+import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { renderShippingNotificationEmail } from "@/lib/emails/render"
 import { z } from "zod"
 
@@ -75,7 +75,7 @@ export async function POST(
             customerName: customer.full_name || "Customer",
             orderNumber: order.order_number,
           })
-          await resend.emails.send({
+          await sendMail({
             from: EMAIL_FROM,
             replyTo: EMAIL_REPLY_TO,
             to: customer.email,
