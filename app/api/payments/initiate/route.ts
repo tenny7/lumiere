@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requestToPay } from "@/lib/momo/client"
+import { normalizeRwandaPhone } from "@/lib/utils/phone"
 import { z } from "zod"
 
 const initiateSchema = z.object({
   orderId: z.string().uuid(),
   provider: z.enum(["momo_mtn", "momo_vodafone", "momo_airteltigo"]),
-  phoneNumber: z.string().regex(/^07[2-9][0-9]{7}$/, "Invalid Rwanda phone number"),
+  phoneNumber: z.string().min(1).max(30),
 })
 
 export async function POST(request: NextRequest) {
@@ -31,7 +32,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { orderId, provider, phoneNumber } = parsed.data
+    const { orderId, provider, phoneNumber: rawPhone } = parsed.data
+
+    const normalizedPhone = normalizeRwandaPhone(rawPhone)
+    if (!normalizedPhone) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid phone number. Use a Rwandan mobile number, e.g. 0781234567 or +250 781 234 567.",
+        },
+        { status: 400 },
+      )
+    }
 
     // Verify the order belongs to this user and is pending
     const { data: order, error: orderError } = await supabase
@@ -75,7 +87,7 @@ export async function POST(request: NextRequest) {
     const { referenceId } = await requestToPay({
       amount: order.total,
       currency: order.currency,
-      phoneNumber,
+      phoneNumber: normalizedPhone.msisdn,
       externalId: order.order_number,
       payerMessage: `Payment for Ajabu Lighting order ${order.order_number}`,
       payeeNote: `Order ${order.order_number}`,
@@ -88,7 +100,7 @@ export async function POST(request: NextRequest) {
         order_id: orderId,
         provider,
         provider_reference: referenceId,
-        phone_number: phoneNumber,
+        phone_number: normalizedPhone.national,
         amount: order.total,
         currency: order.currency,
         status: "pending",

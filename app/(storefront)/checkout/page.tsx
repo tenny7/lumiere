@@ -292,6 +292,7 @@ export default function CheckoutPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  placeholder="0781234567 or +250 781 234 567"
                   required
                   className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
                 />
@@ -477,7 +478,7 @@ export default function CheckoutPage() {
                       type="tel"
                       value={momoPhone}
                       onChange={(e) => setMomoPhone(e.target.value)}
-                      placeholder="024 XXX XXXX"
+                      placeholder="0781234567 or +250 781 234 567"
                       required
                       className="w-full pl-10 pr-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
                     />
