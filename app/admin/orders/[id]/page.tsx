@@ -68,9 +68,9 @@ export default async function OrderDetailPage({
     payment?.provider ??
     "N/A"
 
-  const canUpdateStatus = ["confirmed", "processing", "shipped"].includes(
-    order.status
-  )
+  // Admin can update from any non-terminal state (incl. pending, so orders can
+  // be advanced manually while MoMo isn't fully wired up).
+  const canUpdateStatus = !["refunded"].includes(order.status)
 
   return (
     <div className="space-y-6">

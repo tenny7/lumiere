@@ -13,10 +13,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+// Admin can move an order to any sensible next state. Crucially this includes
+// advancing a `pending` order manually (e.g. payment confirmed out-of-band while
+// MoMo isn't fully wired up), so the rest of the flow — tracking, shipping
+// email, delivery — can be exercised.
 const NEXT_STATUSES: Record<string, string[]> = {
-  confirmed: ["processing", "shipped", "delivered"],
-  processing: ["shipped", "delivered"],
-  shipped: ["delivered"],
+  pending: ["confirmed", "processing", "shipped", "delivered", "cancelled"],
+  confirmed: ["processing", "shipped", "delivered", "cancelled", "refunded"],
+  processing: ["shipped", "delivered", "cancelled", "refunded"],
+  shipped: ["delivered", "refunded"],
+  delivered: ["refunded"],
+  cancelled: ["pending", "confirmed"],
+  refunded: [],
 }
 
 export function OrderStatusUpdater({
