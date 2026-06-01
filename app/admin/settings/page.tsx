@@ -14,7 +14,7 @@ const SETTING_FIELDS = [
   { key: "store_email", label: "Store Email", type: "email" },
   { key: "store_phone", label: "Store Phone", type: "tel" },
   { key: "store_address", label: "Store Address", type: "text" },
-  { key: "currency", label: "Currency", type: "text" },
+  { key: "store_currency", label: "Currency (e.g. RWF, USD)", type: "text" },
   {
     key: "free_shipping_threshold",
     label: "Free Shipping Threshold",

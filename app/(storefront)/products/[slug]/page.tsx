@@ -3,6 +3,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils/format"
 import { getStockLabel } from "@/lib/utils/format"
+import { getStoreCurrency } from "@/lib/utils/settings"
 import { Star, ChevronRight } from "lucide-react"
 import { ProductInteractions } from "@/components/storefront/product-interactions"
 import { ProductReviews } from "@/components/storefront/product-reviews"
@@ -14,6 +15,7 @@ export default async function ProductPage({
 }) {
   const { slug } = await params
   const supabase = await createClient()
+  const storeCurrency = await getStoreCurrency()
 
   const { data: product } = await supabase
     .from("products")
@@ -170,11 +172,11 @@ export default async function ProductPage({
             {/* Price */}
             <div className="mb-6">
               <span className="text-2xl font-light">
-                {formatCurrency(price, product.currency)}
+                {formatCurrency(price, storeCurrency)}
               </span>
               {product.sale_price && (
                 <span className="text-lg text-[#8a8478] line-through ml-3">
-                  {formatCurrency(product.base_price, product.currency)}
+                  {formatCurrency(product.base_price, storeCurrency)}
                 </span>
               )}
             </div>
@@ -206,7 +208,7 @@ export default async function ProductPage({
               productId={product.id}
               basePrice={product.base_price}
               salePrice={product.sale_price}
-              currency={product.currency}
+              currency={storeCurrency}
               baseStock={product.stock_quantity}
               variants={product.variants || []}
               initialWishlisted={initialWishlisted}
@@ -272,7 +274,7 @@ export default async function ProductPage({
                       {item.name}
                     </h3>
                     <p className="text-sm font-light">
-                      {formatCurrency(item.sale_price || item.base_price, item.currency)}
+                      {formatCurrency(item.sale_price || item.base_price, storeCurrency)}
                     </p>
                   </Link>
                 )

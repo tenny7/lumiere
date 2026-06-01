@@ -23,7 +23,13 @@ interface CartItemData {
   variant: { id: string; name: string; price_adjustment: number } | null
 }
 
-export function CartItems({ items }: { items: CartItemData[] }) {
+export function CartItems({
+  items,
+  currency = "RWF",
+}: {
+  items: CartItemData[]
+  currency?: string
+}) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -82,7 +88,7 @@ export function CartItems({ items }: { items: CartItemData[] }) {
                 <p className="text-xs text-[#8a8478]">{item.variant.name}</p>
               )}
               <p className="text-sm mt-1">
-                {formatCurrency(price, item.product.currency)}
+                {formatCurrency(price, currency)}
               </p>
 
               <div className="flex items-center justify-between mt-3">
@@ -120,7 +126,7 @@ export function CartItems({ items }: { items: CartItemData[] }) {
 
             {/* Line total */}
             <div className="text-sm font-medium text-right flex-shrink-0">
-              {formatCurrency(price * item.quantity, item.product.currency)}
+              {formatCurrency(price * item.quantity, currency)}
             </div>
           </div>
         )

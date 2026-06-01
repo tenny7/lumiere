@@ -22,15 +22,25 @@ const NEXT_STATUSES: Record<string, string[]> = {
 export function OrderStatusUpdater({
   orderId,
   currentStatus,
+  trackingNumber: initialTracking = "",
+  trackingCarrier: initialCarrier = "",
+  trackingUrl: initialUrl = "",
 }: {
   orderId: string
   currentStatus: string
+  trackingNumber?: string
+  trackingCarrier?: string
+  trackingUrl?: string
 }) {
   const [status, setStatus] = useState(currentStatus)
+  const [trackingNumber, setTrackingNumber] = useState(initialTracking)
+  const [trackingCarrier, setTrackingCarrier] = useState(initialCarrier)
+  const [trackingUrl, setTrackingUrl] = useState(initialUrl)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
   const options = NEXT_STATUSES[currentStatus] ?? []
+  const showTracking = status === "shipped"
 
   const [saving, setSaving] = useState(false)
 
@@ -41,7 +51,12 @@ export function OrderStatusUpdater({
       const res = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          ...(showTracking
+            ? { trackingNumber, trackingCarrier, trackingUrl }
+            : {}),
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -76,6 +91,36 @@ export function OrderStatusUpdater({
           ))}
         </SelectContent>
       </Select>
+
+      {showTracking && (
+        <div className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={trackingCarrier}
+            onChange={(e) => setTrackingCarrier(e.target.value)}
+            placeholder="Carrier (e.g. DHL, local courier)"
+            className="w-full px-3 py-2 bg-background border border-input rounded-lg text-sm outline-none focus:border-ring"
+          />
+          <input
+            type="text"
+            value={trackingNumber}
+            onChange={(e) => setTrackingNumber(e.target.value)}
+            placeholder="Tracking number"
+            className="w-full px-3 py-2 bg-background border border-input rounded-lg text-sm outline-none focus:border-ring"
+          />
+          <input
+            type="url"
+            value={trackingUrl}
+            onChange={(e) => setTrackingUrl(e.target.value)}
+            placeholder="Tracking URL (optional)"
+            className="w-full px-3 py-2 bg-background border border-input rounded-lg text-sm outline-none focus:border-ring"
+          />
+          <p className="text-xs text-muted-foreground">
+            Included in the shipping email sent to the customer.
+          </p>
+        </div>
+      )}
+
       <Button
         size="sm"
         disabled={status === currentStatus || isPending || saving}

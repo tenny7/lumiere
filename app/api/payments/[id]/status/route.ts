@@ -85,6 +85,12 @@ export async function GET(
         .update({ status: "confirmed" })
         .eq("id", payment.order_id)
 
+      // Clear the customer's cart now that the purchase is complete
+      await adminDb
+        .from("cart_items")
+        .delete()
+        .eq("profile_id", payment.orders.customer_id)
+
       // Decrement stock (simplified — in production use a transaction)
       const { data: orderItems } = await adminDb
         .from("order_items")

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { evaluateCoupon, type CouponRow } from "@/lib/utils/coupon"
+import { getStoreCurrency } from "@/lib/utils/settings"
 import { z } from "zod"
 
 const shippingSchema = z.object({
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
     const baseDelivery = subtotal >= 150 ? 0 : 25
     const deliveryFee = freeShipping ? 0 : baseDelivery
     const total = Math.max(subtotal - discountAmount, 0) + deliveryFee
+    const currency = await getStoreCurrency()
 
     // Create order with server-calculated total
     const { data: order, error: orderError } = await adminDb
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
         discount_amount: discountAmount,
         delivery_fee: deliveryFee,
         total,
-        currency: "RWF",
+        currency,
         coupon_id: couponId,
         shipping_address: {
           full_name: fullName,

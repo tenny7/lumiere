@@ -110,8 +110,19 @@ export function renderOrderConfirmationEmail(props: {
 export function renderShippingNotificationEmail(props: {
   customerName: string
   orderNumber: string
+  trackingNumber?: string
+  trackingCarrier?: string
+  trackingUrl?: string
 }): string {
-  const { customerName, orderNumber } = props
+  const { customerName, orderNumber, trackingNumber, trackingCarrier, trackingUrl } = props
+  const trackingBlock = trackingNumber
+    ? `<div style="background-color:#1a1a16;border-radius:6px;padding:20px;margin-bottom:24px">
+      <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#7a7568;margin:0 0 8px 0">Tracking</p>
+      ${trackingCarrier ? `<p style="font-size:14px;color:#a8a294;margin:0 0 4px 0">Carrier: <span style="color:#f5f0e8">${escapeHtml(trackingCarrier)}</span></p>` : ""}
+      <p style="font-size:15px;color:#f5f0e8;margin:0">Tracking #: <strong>${escapeHtml(trackingNumber)}</strong></p>
+      ${trackingUrl ? `<p style="margin:12px 0 0 0"><a href="${escapeHtml(trackingUrl)}" style="color:#c9a96e;font-size:14px">Track your shipment &rarr;</a></p>` : ""}
+    </div>`
+    : ""
   return `
 <!DOCTYPE html>
 <html>
@@ -124,6 +135,7 @@ export function renderShippingNotificationEmail(props: {
   <div style="padding:40px">
     <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Your order is on its way!</h2>
     <p style="font-size:15px;line-height:24px;color:#a8a294;margin:0 0 24px 0">Hi ${escapeHtml(customerName)}, great news — your order <strong style="color:#f5f0e8">${escapeHtml(orderNumber)}</strong> has been shipped.</p>
+    ${trackingBlock}
     <div style="background-color:#1a1a16;border-radius:6px;padding:20px;margin-bottom:24px">
       <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#7a7568;margin:0 0 8px 0">Estimated Delivery</p>
       <p style="font-size:15px;color:#f5f0e8;margin:0">2–5 business days</p>

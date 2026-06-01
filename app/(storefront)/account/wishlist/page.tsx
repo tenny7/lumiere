@@ -2,11 +2,13 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/utils/format"
+import { getStoreCurrency } from "@/lib/utils/settings"
 import { ArrowLeft, ArrowRight, Heart } from "lucide-react"
 import { WishlistActions } from "./wishlist-actions"
 
 export default async function WishlistPage() {
   const supabase = await createClient()
+  const storeCurrency = await getStoreCurrency()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -71,10 +73,10 @@ export default async function WishlistPage() {
                       {product.name}
                     </h3>
                     <p className="text-sm font-light">
-                      {formatCurrency(product.sale_price || product.base_price, product.currency)}
+                      {formatCurrency(product.sale_price || product.base_price, storeCurrency)}
                       {product.sale_price && (
                         <span className="text-[#8a8478] line-through ml-2 text-xs">
-                          {formatCurrency(product.base_price, product.currency)}
+                          {formatCurrency(product.base_price, storeCurrency)}
                         </span>
                       )}
                     </p>

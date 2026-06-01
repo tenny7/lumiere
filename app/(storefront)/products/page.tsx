@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils/format"
+import { getStoreCurrency } from "@/lib/utils/settings"
 import { ArrowRight } from "lucide-react"
 
 export default async function ProductsPage({
@@ -10,6 +11,7 @@ export default async function ProductsPage({
 }) {
   const params = await searchParams
   const supabase = await createClient()
+  const storeCurrency = await getStoreCurrency()
 
   // Build query
   let query = supabase
@@ -173,10 +175,10 @@ export default async function ProductsPage({
                           {product.category?.name}
                         </p>
                         <p className="text-sm font-light">
-                          {formatCurrency(product.sale_price || product.base_price, product.currency)}
+                          {formatCurrency(product.sale_price || product.base_price, storeCurrency)}
                           {product.sale_price && (
                             <span className="text-[#8a8478] line-through ml-2 text-xs">
-                              {formatCurrency(product.base_price, product.currency)}
+                              {formatCurrency(product.base_price, storeCurrency)}
                             </span>
                           )}
                         </p>

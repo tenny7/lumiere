@@ -15,6 +15,9 @@ const schema = z.object({
     "cancelled",
     "refunded",
   ]),
+  trackingNumber: z.string().max(100).optional(),
+  trackingCarrier: z.string().max(100).optional(),
+  trackingUrl: z.string().url().max(500).optional().or(z.literal("")),
 })
 
 export async function POST(
@@ -47,13 +50,24 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 })
     }
-    const { status } = parsed.data
+    const { status, trackingNumber, trackingCarrier, trackingUrl } = parsed.data
+
+    const updates: Record<string, unknown> = {
+      status,
+      updated_at: new Date().toISOString(),
+    }
+    // Persist tracking details (sent when marking an order shipped)
+    if (trackingNumber !== undefined) updates.tracking_number = trackingNumber || null
+    if (trackingCarrier !== undefined) updates.tracking_carrier = trackingCarrier || null
+    if (trackingUrl !== undefined) updates.tracking_url = trackingUrl || null
 
     const { data: order, error } = await adminDb
       .from("orders")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq("id", id)
-      .select("order_number, customer:profiles(full_name, email)")
+      .select(
+        "order_number, tracking_number, tracking_carrier, tracking_url, customer:profiles(full_name, email)",
+      )
       .single()
 
     if (error || !order) {
@@ -74,6 +88,9 @@ export async function POST(
           const html = renderShippingNotificationEmail({
             customerName: customer.full_name || "Customer",
             orderNumber: order.order_number,
+            trackingNumber: order.tracking_number || undefined,
+            trackingCarrier: order.tracking_carrier || undefined,
+            trackingUrl: order.tracking_url || undefined,
           })
           await sendMail({
             from: EMAIL_FROM,

@@ -1,11 +1,13 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils/format"
+import { getStoreCurrency } from "@/lib/utils/settings"
 import { CartItems } from "@/components/storefront/cart-items"
 import { ShoppingBag } from "lucide-react"
 
 export default async function CartPage() {
   const supabase = await createClient()
+  const storeCurrency = await getStoreCurrency()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -57,7 +59,7 @@ export default async function CartPage() {
         {cartItems.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             <div className="lg:col-span-2">
-              <CartItems items={cartItems} />
+              <CartItems items={cartItems} currency={storeCurrency} />
             </div>
 
             {/* Summary */}
@@ -69,24 +71,24 @@ export default async function CartPage() {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-[#8a8478]">Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span>{formatCurrency(subtotal, storeCurrency)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#8a8478]">Delivery</span>
                     <span className="text-[#8a8478]">
-                      {subtotal >= 150 ? "Free" : formatCurrency(25)}
+                      {subtotal >= 150 ? "Free" : formatCurrency(25, storeCurrency)}
                     </span>
                   </div>
                   <div className="border-t border-white/5 pt-3 flex justify-between text-base font-medium">
                     <span>Total</span>
                     <span>
-                      {formatCurrency(subtotal + (subtotal >= 150 ? 0 : 25))}
+                      {formatCurrency(subtotal + (subtotal >= 150 ? 0 : 25), storeCurrency)}
                     </span>
                   </div>
                 </div>
                 {subtotal < 150 && (
                   <p className="text-xs text-amber-400 mb-4">
-                    Add {formatCurrency(150 - subtotal)} more for free delivery
+                    Add {formatCurrency(150 - subtotal, storeCurrency)} more for free delivery
                   </p>
                 )}
                 <Link

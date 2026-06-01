@@ -100,6 +100,9 @@ export async function POST(request: NextRequest) {
         .update({ status: "confirmed" })
         .eq("id", order.id)
 
+      // Clear the customer's cart now that the purchase is complete
+      await adminDb.from("cart_items").delete().eq("profile_id", order.customer_id)
+
       // Decrement stock
       const { data: orderItems } = await adminDb
         .from("order_items")

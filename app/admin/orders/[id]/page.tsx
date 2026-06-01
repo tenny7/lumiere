@@ -291,6 +291,9 @@ export default async function OrderDetailPage({
                 <OrderStatusUpdater
                   orderId={order.id}
                   currentStatus={order.status}
+                  trackingNumber={order.tracking_number || ""}
+                  trackingCarrier={order.tracking_carrier || ""}
+                  trackingUrl={order.tracking_url || ""}
                 />
               </CardContent>
             </Card>
