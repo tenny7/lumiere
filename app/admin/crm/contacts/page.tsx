@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
-import { formatCurrency, formatDate } from "@/lib/utils/format"
+import { formatCurrency } from "@/lib/utils/format"
 import { CRM_CONTACT_STATUS_LABELS } from "@/lib/utils/constants"
 import { Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -14,30 +14,55 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-const statusColors: Record<string, string> = {
-  lead: "bg-blue-500/10 text-blue-500",
-  prospect: "bg-purple-500/10 text-purple-500",
-  active_customer: "bg-green-500/10 text-green-500",
-  churned: "bg-red-500/10 text-red-500",
-  vip: "bg-amber-500/10 text-amber-500",
+// Mature, high-contrast status styles for a light admin surface:
+// muted tinted background + dark readable text + subtle border + status dot.
+const statusStyles: Record<string, { badge: string; dot: string }> = {
+  lead: { badge: "bg-slate-100 text-slate-700 border-slate-200", dot: "bg-slate-400" },
+  prospect: { badge: "bg-indigo-50 text-indigo-700 border-indigo-200", dot: "bg-indigo-500" },
+  active_customer: { badge: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  churned: { badge: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" },
+  vip: { badge: "bg-amber-50 text-amber-800 border-amber-200", dot: "bg-amber-500" },
 }
 
-export default async function CrmContactsPage() {
+function StatusBadge({ status }: { status: string }) {
+  const s = statusStyles[status] || statusStyles.lead
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${s.badge}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+      {CRM_CONTACT_STATUS_LABELS[status] || status}
+    </span>
+  )
+}
+
+export default async function CrmContactsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const { status: statusFilter } = await searchParams
   const supabase = await createClient()
 
-  const { data: contacts } = await supabase
+  let query = supabase
     .from("crm_contacts")
-    .select("*, assigned_agent:profiles!crm_contacts_assigned_agent_id_fkey(full_name)")
+    .select(
+      "*, assigned_agent:profiles!crm_contacts_assigned_agent_id_fkey(full_name)",
+    )
     .order("updated_at", { ascending: false })
     .limit(50)
+
+  if (statusFilter && CRM_CONTACT_STATUS_LABELS[statusFilter]) {
+    query = query.eq("status", statusFilter)
+  }
+
+  const { data: contacts } = await query
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            CRM Contacts
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">CRM Contacts</h1>
           <p className="text-sm text-muted-foreground">
             Manage leads, prospects, and customer relationships
           </p>
@@ -48,13 +73,36 @@ export default async function CrmContactsPage() {
         </Button>
       </div>
 
-      {/* Status filter pills */}
-      <div className="flex gap-2">
-        {Object.entries(CRM_CONTACT_STATUS_LABELS).map(([key, label]) => (
-          <Badge key={key} variant="secondary" className={`cursor-pointer ${statusColors[key]}`}>
-            {label}
-          </Badge>
-        ))}
+      {/* Status filter — functional, mature pills */}
+      <div className="flex flex-wrap gap-1.5">
+        <Link
+          href="/admin/crm/contacts"
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            !statusFilter
+              ? "border-foreground bg-foreground text-background"
+              : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+          }`}
+        >
+          All
+        </Link>
+        {Object.entries(CRM_CONTACT_STATUS_LABELS).map(([key, label]) => {
+          const active = statusFilter === key
+          const s = statusStyles[key]
+          return (
+            <Link
+              key={key}
+              href={`/admin/crm/contacts?status=${key}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                active
+                  ? s.badge
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+              {label}
+            </Link>
+          )
+        })}
       </div>
 
       <div className="border rounded-lg">
@@ -65,8 +113,8 @@ export default async function CrmContactsPage() {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Orders</TableHead>
-              <TableHead>Lifetime Value</TableHead>
+              <TableHead className="text-right">Orders</TableHead>
+              <TableHead className="text-right">Lifetime Value</TableHead>
               <TableHead>Agent</TableHead>
               <TableHead>Tags</TableHead>
             </TableRow>
@@ -89,15 +137,12 @@ export default async function CrmContactsPage() {
                   {contact.phone || "—"}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="secondary"
-                    className={`text-[0.6rem] ${statusColors[contact.status]}`}
-                  >
-                    {CRM_CONTACT_STATUS_LABELS[contact.status]}
-                  </Badge>
+                  <StatusBadge status={contact.status} />
                 </TableCell>
-                <TableCell className="text-sm">{contact.total_orders}</TableCell>
-                <TableCell className="text-sm font-medium">
+                <TableCell className="text-sm text-right tabular-nums">
+                  {contact.total_orders}
+                </TableCell>
+                <TableCell className="text-sm font-medium text-right tabular-nums">
                   {formatCurrency(contact.lifetime_value)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
@@ -124,8 +169,9 @@ export default async function CrmContactsPage() {
                   colSpan={8}
                   className="text-center py-12 text-muted-foreground"
                 >
-                  No contacts yet. They&apos;ll appear here automatically when
-                  customers place orders.
+                  {statusFilter
+                    ? "No contacts with this status."
+                    : "No contacts yet. They'll appear here automatically when customers place orders."}
                 </TableCell>
               </TableRow>
             )}

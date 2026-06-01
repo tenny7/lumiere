@@ -6,22 +6,34 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus } from "lucide-react"
 
-export default async function CrmDealsPage() {
+export default async function CrmDealsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pipeline?: string }>
+}) {
+  const { pipeline: pipelineParam } = await searchParams
   const supabase = await createClient()
 
   const { data: pipelines } = await supabase
     .from("crm_pipelines")
     .select("*")
-    .limit(5)
+    .order("name")
 
   const { data: deals } = await supabase
     .from("crm_deals")
-    .select("*, contact:crm_contacts(full_name), assignee:profiles!crm_deals_assigned_to_fkey(full_name)")
+    .select(
+      "*, contact:crm_contacts(full_name), assignee:profiles!crm_deals_assigned_to_fkey(full_name)",
+    )
     .eq("status", "open")
     .order("updated_at", { ascending: false })
 
-  const activePipeline = pipelines?.[0]
-  const stages = (activePipeline?.stages as { name: string; order: number }[]) || []
+  // Active pipeline: the one in the URL, else the first.
+  const activePipeline =
+    pipelines?.find((p) => p.id === pipelineParam) || pipelines?.[0]
+  const stages =
+    (activePipeline?.stages as { name: string; order: number }[]) || []
+  const pipelineDeals =
+    deals?.filter((d) => d.pipeline_id === activePipeline?.id) || []
 
   return (
     <div className="space-y-6">
@@ -31,7 +43,12 @@ export default async function CrmDealsPage() {
             Deal Pipeline
           </h1>
           <p className="text-sm text-muted-foreground">
-            {activePipeline?.name || "No pipeline configured"}
+            {pipelineDeals.length} open deal
+            {pipelineDeals.length === 1 ? "" : "s"} ·{" "}
+            {formatCurrency(
+              pipelineDeals.reduce((sum, d) => sum + (d.value || 0), 0),
+            )}{" "}
+            in pipeline
           </p>
         </div>
         <Button size="sm" render={<Link href="/admin/crm/deals/new" />}>
@@ -40,10 +57,36 @@ export default async function CrmDealsPage() {
         </Button>
       </div>
 
+      {/* Pipeline switcher */}
+      {pipelines && pipelines.length > 1 && (
+        <div className="flex gap-1 border-b">
+          {pipelines.map((p) => {
+            const isActive = p.id === activePipeline?.id
+            const count = deals?.filter((d) => d.pipeline_id === p.id).length || 0
+            return (
+              <Link
+                key={p.id}
+                href={`/admin/crm/deals?pipeline=${p.id}`}
+                className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
+                  isActive
+                    ? "border-foreground font-medium text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {p.name}
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  {count}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
       {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-4">
         {stages.map((stage) => {
-          const stageDeals = deals?.filter((d) => d.stage === stage.name) || []
+          const stageDeals = pipelineDeals.filter((d) => d.stage === stage.name)
           const stageValue = stageDeals.reduce(
             (sum, d) => sum + (d.value || 0),
             0,
@@ -65,34 +108,32 @@ export default async function CrmDealsPage() {
                 {stageDeals.map((deal) => (
                   <Link key={deal.id} href={`/admin/crm/deals/${deal.id}`}>
                     <Card className="cursor-pointer hover:border-primary/30 transition-colors">
-                    <CardContent className="p-3">
-                      <p className="text-sm font-medium mb-1">{deal.title}</p>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {deal.contact?.full_name}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                          {deal.value ? formatCurrency(deal.value) : "—"}
-                        </span>
-                        <span className="text-[0.6rem] text-muted-foreground">
-                          {deal.probability}%
-                        </span>
-                      </div>
-                      {deal.assignee && (
-                        <p className="text-[0.6rem] text-muted-foreground mt-1">
-                          {deal.assignee.full_name}
+                      <CardContent className="p-3">
+                        <p className="text-sm font-medium mb-1">{deal.title}</p>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {deal.contact?.full_name}
                         </p>
-                      )}
-                    </CardContent>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            {deal.value ? formatCurrency(deal.value) : "—"}
+                          </span>
+                          <span className="text-[0.6rem] text-muted-foreground">
+                            {deal.probability}%
+                          </span>
+                        </div>
+                        {deal.assignee && (
+                          <p className="text-[0.6rem] text-muted-foreground mt-1">
+                            {deal.assignee.full_name}
+                          </p>
+                        )}
+                      </CardContent>
                     </Card>
                   </Link>
                 ))}
 
                 {stageDeals.length === 0 && (
                   <div className="border border-dashed rounded-lg p-4 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      No deals
-                    </p>
+                    <p className="text-xs text-muted-foreground">No deals</p>
                   </div>
                 )}
               </div>
