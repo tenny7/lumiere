@@ -11,9 +11,9 @@ const pass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASSWORD
 // Gmail rewrites/rejects arbitrary "From" addresses, so the From must be the
 // authenticated account (or a verified alias). Default it to the SMTP user.
 export const EMAIL_FROM =
-  process.env.EMAIL_FROM || (user ? `Lumière <${user}>` : "Lumière <no-reply@lumiere.com>")
+  process.env.EMAIL_FROM || (user ? `Ajabu Lighting <${user}>` : "Ajabu Lighting <no-reply@ajabulighting.com>")
 export const EMAIL_REPLY_TO =
-  process.env.EMAIL_REPLY_TO || user || "support@lumiere.com"
+  process.env.EMAIL_REPLY_TO || user || "support@ajabulighting.com"
 
 let transporter: nodemailer.Transporter | null = null
 

@@ -548,7 +548,7 @@ export default function CheckoutPage() {
               {orderNumber}
             </p>
             <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-8 leading-relaxed">
-              Thank you for shopping with Lumiere. We&apos;ll send you an email
+              Thank you for shopping with Ajabu Lighting. We&apos;ll send you an email
               confirmation and notify you when your order ships.
             </p>
 

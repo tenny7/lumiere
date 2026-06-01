@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       currency: order.currency,
       phoneNumber,
       externalId: order.order_number,
-      payerMessage: `Payment for Lumiere order ${order.order_number}`,
+      payerMessage: `Payment for Ajabu Lighting order ${order.order_number}`,
       payeeNote: `Order ${order.order_number}`,
     })
 

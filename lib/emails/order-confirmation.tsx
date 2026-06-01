@@ -76,7 +76,7 @@ export function OrderConfirmationEmail({
               margin: 0,
             }}
           >
-            LUMIERE
+            AJABU LIGHTING
           </h1>
         </div>
 
@@ -374,9 +374,9 @@ export function OrderConfirmationEmail({
               lineHeight: "20px",
             }}
           >
-            Lumiere Lighting &middot; Kigali, Rwanda
+            Ajabu Lighting &middot; Kigali, Rwanda
             <br />
-            &copy; {new Date().getFullYear()} Lumiere. All rights reserved.
+            &copy; {new Date().getFullYear()} Ajabu Lighting. All rights reserved.
           </p>
         </div>
       </div>

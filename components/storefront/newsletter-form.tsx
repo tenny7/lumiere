@@ -23,7 +23,7 @@ export function NewsletterForm() {
       } else {
         setSubscribed(true)
         setEmail("")
-        toast.success("You're subscribed — welcome to Lumière.")
+        toast.success("You're subscribed — welcome to Ajabu Lighting.")
       }
     } catch {
       toast.error("Something went wrong. Please try again.")

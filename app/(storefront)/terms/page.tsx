@@ -10,7 +10,7 @@ export default function TermsPage() {
           <p>Last updated: April 2026</p>
           <section>
             <h2 className="font-serif text-xl text-[#f5f0e8] mb-3">General</h2>
-            <p>By using lumiere.com you agree to these terms. We reserve the right to update them at any time. Continued use of the site constitutes acceptance of any changes.</p>
+            <p>By using ajabulighting.com you agree to these terms. We reserve the right to update them at any time. Continued use of the site constitutes acceptance of any changes.</p>
           </section>
           <section>
             <h2 className="font-serif text-xl text-[#f5f0e8] mb-3">Orders &amp; Payments</h2>

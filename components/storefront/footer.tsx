@@ -34,9 +34,9 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link
               href="/"
-              className="font-serif text-xl font-light tracking-[0.3em] text-warm-white inline-block mb-4"
+              className="font-serif text-xl font-light tracking-[0.15em] text-warm-white inline-block mb-4 whitespace-nowrap"
             >
-              LUMI<span className="text-amber">E</span>RE
+              AJABU <span className="text-amber">LIGHTING</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px]">
               Curated lighting for spaces that deserve to shine. Handpicked
@@ -105,7 +105,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-6 border-t border-white/5">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Lumiere. All rights reserved.
+            &copy; {new Date().getFullYear()} Ajabu Lighting. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link

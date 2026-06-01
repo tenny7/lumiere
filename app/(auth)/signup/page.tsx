@@ -49,7 +49,7 @@ export default function SignupPage() {
     <div>
       <h1 className="font-serif text-2xl font-light mb-2">Create an account</h1>
       <p className="text-sm text-[#8a8478] mb-8">
-        Join Lumiere to start shopping for beautiful lights
+        Join Ajabu Lighting to start shopping for beautiful lights
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">

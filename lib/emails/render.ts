@@ -51,7 +51,7 @@ export function renderOrderConfirmationEmail(props: {
 <div style="max-width:600px;margin:0 auto;padding:40px 20px">
 <div style="background-color:#141410;border-radius:8px;overflow:hidden">
   <div style="padding:32px 40px;border-bottom:1px solid #2a2a24;text-align:center">
-    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">LUMIERE</h1>
+    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">AJABU LIGHTING</h1>
   </div>
   <div style="padding:40px">
     <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Thank you, ${escapeHtml(customerName)}!</h2>
@@ -99,7 +99,7 @@ export function renderOrderConfirmationEmail(props: {
     <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">We will notify you when your order ships. If you have any questions, reply to this email.</p>
   </div>
   <div style="padding:24px 40px;border-top:1px solid #2a2a24;text-align:center">
-    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Lumiere Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Lumiere. All rights reserved.</p>
+    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Ajabu Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Ajabu Lighting. All rights reserved.</p>
   </div>
 </div>
 </div>
@@ -130,7 +130,7 @@ export function renderShippingNotificationEmail(props: {
 <div style="max-width:600px;margin:0 auto;padding:40px 20px">
 <div style="background-color:#141410;border-radius:8px;overflow:hidden">
   <div style="padding:32px 40px;border-bottom:1px solid #2a2a24;text-align:center">
-    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">LUMIERE</h1>
+    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">AJABU LIGHTING</h1>
   </div>
   <div style="padding:40px">
     <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Your order is on its way!</h2>
@@ -143,7 +143,7 @@ export function renderShippingNotificationEmail(props: {
     <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">We'll notify you when your order arrives. If you have any questions, reply to this email.</p>
   </div>
   <div style="padding:24px 40px;border-top:1px solid #2a2a24;text-align:center">
-    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Lumiere Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Lumiere. All rights reserved.</p>
+    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Ajabu Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Ajabu Lighting. All rights reserved.</p>
   </div>
 </div>
 </div>
@@ -163,10 +163,10 @@ export function renderWelcomeEmail(props: {
 <div style="max-width:600px;margin:0 auto;padding:40px 20px">
 <div style="background-color:#141410;border-radius:8px;overflow:hidden">
   <div style="padding:32px 40px;border-bottom:1px solid #2a2a24;text-align:center">
-    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">LUMIERE</h1>
+    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">AJABU LIGHTING</h1>
   </div>
   <div style="padding:40px">
-    <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Welcome to Lumiere, ${escapeHtml(customerName)}!</h2>
+    <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Welcome to Ajabu Lighting, ${escapeHtml(customerName)}!</h2>
     <p style="font-size:15px;line-height:24px;color:#a8a294;margin:0 0 24px 0">Thank you for creating an account. We curate exceptional lighting from artisan makers and renowned designers — explore our collection and find the perfect light for your space.</p>
     <div style="text-align:center;margin:32px 0">
       <a href="${escapeHtml(appUrl)}/products" style="display:inline-block;padding:14px 32px;background-color:#c9a96e;color:#0a0a08;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border-radius:4px">Start Shopping</a>
@@ -174,7 +174,7 @@ export function renderWelcomeEmail(props: {
     <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">If you have any questions, reply to this email — we're here to help.</p>
   </div>
   <div style="padding:24px 40px;border-top:1px solid #2a2a24;text-align:center">
-    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Lumiere Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Lumiere. All rights reserved.</p>
+    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Ajabu Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Ajabu Lighting. All rights reserved.</p>
   </div>
 </div>
 </div>

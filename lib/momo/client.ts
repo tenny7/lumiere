@@ -73,7 +73,7 @@ export async function requestToPay(params: {
       partyIdType: "MSISDN",
       partyId: params.phoneNumber,
     },
-    payerMessage: params.payerMessage || "Payment for Lumière order",
+    payerMessage: params.payerMessage || "Payment for Ajabu Lighting order",
     payeeNote: params.payeeNote || `Order ${params.externalId}`,
   }
 

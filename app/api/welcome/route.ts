@@ -35,13 +35,13 @@ export async function POST(request: NextRequest) {
     try {
       const html = renderWelcomeEmail({
         customerName: name || profile.full_name || "there",
-        appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://lumiere.com",
+        appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://ajabulighting.com",
       })
       await sendMail({
         from: EMAIL_FROM,
         replyTo: EMAIL_REPLY_TO,
         to: email,
-        subject: "Welcome to Lumière",
+        subject: "Welcome to Ajabu Lighting",
         html,
       })
     } catch (emailError) {

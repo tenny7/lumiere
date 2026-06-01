@@ -23,7 +23,7 @@ export default function ShippingPage() {
             <ul className="space-y-2 text-sm list-disc list-inside">
               <li>30-day return window for unused items in original packaging</li>
               <li>Damaged items reported within 48 hours qualify for free replacement</li>
-              <li>Contact support@lumiere.com to initiate a return</li>
+              <li>Contact support@ajabulighting.com to initiate a return</li>
             </ul>
           </section>
         </div>

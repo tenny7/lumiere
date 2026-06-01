@@ -73,7 +73,7 @@ export function LoginForm() {
     <div>
       <h1 className="font-serif text-2xl font-light mb-2">Welcome back</h1>
       <p className="text-sm text-[#8a8478] mb-8">
-        Sign in to your Lumiere account
+        Sign in to your Ajabu Lighting account
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">

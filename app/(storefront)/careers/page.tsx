@@ -6,7 +6,7 @@ export default function CareersPage() {
           Join Us
         </p>
         <h1 className="font-serif text-4xl lg:text-5xl font-light mb-8">
-          Careers at Lumiere
+          Careers at Ajabu Lighting
         </h1>
         <p className="text-[#c4bdb0] leading-relaxed mb-6">
           We&apos;re always looking for passionate people to join our growing team
@@ -14,7 +14,7 @@ export default function CareersPage() {
           customer experiences, we&apos;d love to hear from you.
         </p>
         <p className="text-sm text-[#8a8478]">
-          No open positions at the moment. Send your CV to careers@lumiere.com
+          No open positions at the moment. Send your CV to careers@ajabulighting.com
           and we&apos;ll keep it on file.
         </p>
       </div>

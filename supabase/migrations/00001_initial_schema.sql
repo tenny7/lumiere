@@ -682,13 +682,13 @@ INSERT INTO crm_pipelines (name, stages) VALUES
   ('Interior Designer Leads', '[{"name": "Initial Contact", "order": 1}, {"name": "Project Brief", "order": 2}, {"name": "Product Selection", "order": 3}, {"name": "Bulk Order", "order": 4}, {"name": "Completed", "order": 5}]');
 
 INSERT INTO store_settings (key, value) VALUES
-  ('store_name', '"Lumière"'),
+  ('store_name', '"Ajabu Lighting"'),
   ('store_currency', '"RWF"'),
   ('store_tax_rate', '0'),
   ('free_shipping_threshold', '150'),
   ('delivery_fee', '25'),
   ('store_phone', '"+233 XX XXX XXXX"'),
-  ('store_email', '"hello@lumiere.com"'),
+  ('store_email', '"hello@ajabulighting.com"'),
   ('store_address', '{"line_1": "KG 7 Ave", "city": "Kigali", "region": "Kigali", "country": "Rwanda"}');
 
 -- =============================================

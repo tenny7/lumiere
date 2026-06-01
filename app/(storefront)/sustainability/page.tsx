@@ -10,7 +10,7 @@ export default function SustainabilityPage() {
         </h1>
         <div className="space-y-6 text-[#c4bdb0] leading-relaxed">
           <p>
-            At Lumiere, we believe beautiful lighting and environmental responsibility
+            At Ajabu Lighting, we believe beautiful lighting and environmental responsibility
             go hand in hand. We prioritize energy-efficient LED technology, sustainably
             sourced materials, and minimal-waste packaging across our entire collection.
           </p>

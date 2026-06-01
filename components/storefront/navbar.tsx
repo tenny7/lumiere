@@ -50,9 +50,9 @@ export function Navbar() {
           {/* Logo */}
           <Link
             href="/"
-            className="font-serif text-xl lg:text-2xl font-light tracking-[0.3em] text-warm-white"
+            className="font-serif text-lg lg:text-2xl font-light tracking-[0.15em] lg:tracking-[0.25em] text-warm-white whitespace-nowrap"
           >
-            LUMI<span className="text-amber">E</span>RE
+            AJABU <span className="text-amber">LIGHTING</span>
           </Link>
 
           {/* Desktop Nav */}

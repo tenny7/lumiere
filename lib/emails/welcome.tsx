@@ -43,7 +43,7 @@ export function WelcomeEmail({ customerName, appUrl }: WelcomeEmailProps) {
               margin: 0,
             }}
           >
-            LUMIERE
+            AJABU LIGHTING
           </h1>
         </div>
 
@@ -67,7 +67,7 @@ export function WelcomeEmail({ customerName, appUrl }: WelcomeEmailProps) {
               margin: "0 0 24px 0",
             }}
           >
-            Thank you for joining Lumiere. We curate premium lighting
+            Thank you for joining Ajabu Lighting. We curate premium lighting
             fixtures that transform spaces — from elegant chandeliers to
             modern pendants, every piece is selected for quality and design.
           </p>
@@ -132,9 +132,9 @@ export function WelcomeEmail({ customerName, appUrl }: WelcomeEmailProps) {
               lineHeight: "20px",
             }}
           >
-            Lumiere Lighting &middot; Kigali, Rwanda
+            Ajabu Lighting &middot; Kigali, Rwanda
             <br />
-            &copy; {new Date().getFullYear()} Lumiere. All rights reserved.
+            &copy; {new Date().getFullYear()} Ajabu Lighting. All rights reserved.
           </p>
         </div>
       </div>

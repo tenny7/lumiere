@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "Lumiere — Curated Light for Every Space",
+  title: "Ajabu Lighting — Curated Light for Every Space",
   description:
     "Handpicked lighting fixtures — chandeliers, pendants, smart lights, outdoor lighting and more. Transform your space from simply lit to truly luminous.",
 }

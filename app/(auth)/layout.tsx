@@ -15,7 +15,7 @@ export default function AuthLayout({
             href="/"
             className="font-serif text-4xl font-light tracking-[0.3em] mb-6 block"
           >
-            LUMI<span className="text-amber-400">E</span>RE
+            AJABU <span className="text-amber-400">LIGHTING</span>
           </Link>
           <p className="text-[#8a8478] text-sm font-light leading-relaxed max-w-sm mx-auto">
             Curated lighting for spaces that deserve to shine. Sign in to manage
@@ -32,7 +32,7 @@ export default function AuthLayout({
             href="/"
             className="lg:hidden font-serif text-2xl font-light tracking-[0.3em] mb-10 block text-center"
           >
-            LUMI<span className="text-amber-400">E</span>RE
+            AJABU <span className="text-amber-400">LIGHTING</span>
           </Link>
           {children}
         </div>

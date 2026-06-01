@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           </section>
           <section>
             <h2 className="font-serif text-xl text-[#f5f0e8] mb-3">Contact</h2>
-            <p>For privacy inquiries, contact us at privacy@lumiere.com.</p>
+            <p>For privacy inquiries, contact us at privacy@ajabulighting.com.</p>
           </section>
         </div>
       </div>

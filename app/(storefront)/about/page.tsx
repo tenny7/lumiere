@@ -10,7 +10,7 @@ export default function AboutPage() {
         </h1>
         <div className="space-y-6 text-[#c4bdb0] leading-relaxed">
           <p>
-            Lumiere was born from a simple belief: the right light transforms everything.
+            Ajabu Lighting was born from a simple belief: the right light transforms everything.
             A room, a mood, a moment. We curate exceptional lighting from artisan makers
             and renowned designers to bring that transformation to your space.
           </p>

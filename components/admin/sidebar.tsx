@@ -63,7 +63,7 @@ export function AdminSidebar() {
             <Lightbulb className="w-4 h-4 text-black" />
           </div>
           <div>
-            <span className="font-semibold text-sm tracking-wide">Lumiere</span>
+            <span className="font-semibold text-sm tracking-wide">Ajabu Lighting</span>
             <span className="text-[0.6rem] text-muted-foreground block -mt-0.5">
               Admin Panel
             </span>

@@ -50,7 +50,7 @@ export default function ContactPage() {
           <div className="border border-white/[0.06] p-6">
             <Mail className="w-5 h-5 text-amber-400 mb-3" strokeWidth={1.5} />
             <h3 className="font-serif text-base mb-1">Email</h3>
-            <p className="text-sm text-[#8a8478]">support@lumiere.com</p>
+            <p className="text-sm text-[#8a8478]">support@ajabulighting.com</p>
           </div>
           <div className="border border-white/[0.06] p-6">
             <Phone className="w-5 h-5 text-amber-400 mb-3" strokeWidth={1.5} />
