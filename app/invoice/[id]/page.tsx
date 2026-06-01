@@ -85,38 +85,39 @@ export default async function InvoicePage({
         </div>
 
         {/* Invoice document */}
-        <div className="bg-white shadow-sm print:shadow-none border border-neutral-200 print:border-0 p-10">
+        <div className="bg-white shadow-sm print:shadow-none border border-neutral-200 print:border-0 p-6 sm:p-12">
           {/* Header */}
-          <div className="flex items-start justify-between mb-10">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-10">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-neutral-900">
                 {storeName}
               </h1>
-              {storeAddr && (
-                <p className="text-sm text-neutral-500 mt-1">
-                  {[storeAddr.line_1, storeAddr.city, storeAddr.region, storeAddr.country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-              )}
-              {storeEmail && (
-                <p className="text-sm text-neutral-500">{storeEmail}</p>
-              )}
-              {storePhone && (
-                <p className="text-sm text-neutral-500">{storePhone}</p>
-              )}
+              <div className="mt-1.5 space-y-0.5 text-sm text-neutral-500">
+                {storeAddr && (
+                  <p>
+                    {[storeAddr.line_1, storeAddr.city, storeAddr.region, storeAddr.country]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                )}
+                {storeEmail && <p className="break-all">{storeEmail}</p>}
+                {storePhone && <p>{storePhone}</p>}
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400">
+            <div className="shrink-0 sm:text-right">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-neutral-400">
                 Invoice
               </p>
-              <p className="text-lg font-semibold mt-1">{order.order_number}</p>
+              <p className="mt-1 font-mono text-base font-semibold whitespace-nowrap text-neutral-900">
+                {order.order_number}
+              </p>
               <p className="text-sm text-neutral-500">
                 {formatDate(order.created_at)}
               </p>
-              <p className="mt-2 inline-block rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium capitalize">
+              <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium capitalize text-neutral-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-neutral-400" />
                 {order.status}
-              </p>
+              </span>
             </div>
           </div>
 

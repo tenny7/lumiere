@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Package, Heart, Settings, LogOut } from "lucide-react"
+import { RoleBadge } from "@/components/role-badge"
 
 export default async function AccountPage() {
   const supabase = await createClient()
@@ -20,7 +21,7 @@ export default async function AccountPage() {
   const { count: orderCount } = await supabase
     .from("orders")
     .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
+    .eq("customer_id", user.id)
 
   return (
     <div className="pt-24 pb-16">
@@ -31,7 +32,10 @@ export default async function AccountPage() {
         <h1 className="font-serif text-4xl font-light mb-2">
           Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
         </h1>
-        <p className="text-sm text-[#8a8478] mb-10">{user.email}</p>
+        <div className="flex items-center gap-2.5 mb-10">
+          <p className="text-sm text-[#8a8478]">{user.email}</p>
+          <RoleBadge role={profile?.role} />
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Link

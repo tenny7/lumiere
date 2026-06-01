@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { RoleBadge } from "@/components/role-badge"
 
 function initials(name: string) {
   return name
@@ -30,6 +31,7 @@ export function AdminHeader() {
   const router = useRouter()
   const [query, setQuery] = useState("")
   const [name, setName] = useState("Admin")
+  const [role, setRole] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
 
   useEffect(() => {
@@ -41,10 +43,11 @@ export function AdminHeader() {
       if (!user) return
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, role")
         .eq("id", user.id)
         .single()
       if (profile?.full_name) setName(profile.full_name)
+      if (profile?.role) setRole(profile.role)
 
       const { count } = await supabase
         .from("orders")
@@ -124,6 +127,7 @@ export function AdminHeader() {
               </AvatarFallback>
             </Avatar>
             <span className="text-sm hidden sm:inline">{name}</span>
+            <RoleBadge role={role} className="hidden sm:inline-flex" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
