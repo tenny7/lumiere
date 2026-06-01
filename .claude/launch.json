@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "lumiere",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "-p", "3002"],
-      "port": 3002
+      "name": "lumiere-dev",
+      "runtimeExecutable": "/Users/t.onovwiona/.nvm/versions/node/v20.20.2/bin/node",
+      "runtimeArgs": ["node_modules/next/dist/bin/next", "dev", "-p", "3010"],
+      "port": 3010
     }
   ]
 }

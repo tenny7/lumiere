@@ -12,6 +12,14 @@ const API_KEY = process.env.MOMO_COLLECTION_API_KEY!
 const ENVIRONMENT = process.env.MOMO_ENVIRONMENT || "sandbox"
 const CALLBACK_URL = process.env.MOMO_CALLBACK_URL!
 
+// Mock mode: lets checkout complete without real MTN MoMo credentials.
+// Enable with MOMO_ENVIRONMENT=mock (or MOMO_MOCK=true). When on, requestToPay
+// returns a fake reference and getPaymentStatus reports SUCCESSFUL, so the
+// order is confirmed, stock is decremented, and the confirmation email is sent
+// — exactly as a real successful payment would. Switch MOMO_ENVIRONMENT back to
+// "sandbox" or "production" (with real creds) to use the live API.
+const MOCK = ENVIRONMENT === "mock" || process.env.MOMO_MOCK === "true"
+
 let cachedToken: { token: string; expiresAt: number } | null = null
 
 async function getAccessToken(): Promise<string> {
@@ -50,6 +58,10 @@ export async function requestToPay(params: {
   payerMessage?: string
   payeeNote?: string
 }): Promise<{ referenceId: string }> {
+  if (MOCK) {
+    return { referenceId: `mock-${randomUUID()}` }
+  }
+
   const token = await getAccessToken()
   const referenceId = randomUUID()
 
@@ -90,6 +102,21 @@ export async function requestToPay(params: {
 export async function getPaymentStatus(
   referenceId: string,
 ): Promise<MomoRequestToPayResult> {
+  if (MOCK) {
+    // Report success. `amount` is intentionally empty so the caller's
+    // amount-match check is skipped (it validates only when amount is present).
+    return {
+      amount: "",
+      currency: process.env.MOMO_CURRENCY || "RWF",
+      financialTransactionId: `mock-${Date.now()}`,
+      externalId: referenceId,
+      payer: { partyIdType: "MSISDN", partyId: "" },
+      payerMessage: "Mock payment",
+      payeeNote: "Mock payment",
+      status: "SUCCESSFUL",
+    }
+  }
+
   const token = await getAccessToken()
 
   const res = await fetch(`${API_URL}/v1_0/requesttopay/${referenceId}`, {

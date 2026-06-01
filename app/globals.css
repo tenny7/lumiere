@@ -123,9 +123,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Guard against decorative/marquee elements forcing a wider layout than the
+       viewport, which on mobile causes the page to zoom out and scroll sideways.
+       `clip` (not `hidden`) avoids creating a scroll container, so sticky/fixed
+       positioning keeps working. */
+    overflow-x: clip;
   }
   html {
     @apply font-sans;
+    overflow-x: clip;
   }
 }
 
