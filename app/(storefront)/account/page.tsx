@@ -30,7 +30,12 @@ export default async function AccountPage() {
           My Account
         </p>
         <h1 className="font-serif text-4xl font-light mb-2">
-          Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
+          Welcome back
+          {profile?.username
+            ? `, ${profile.username}`
+            : profile?.full_name && !profile.full_name.includes("@")
+              ? `, ${profile.full_name.split(" ")[0]}`
+              : ""}
         </h1>
         <div className="flex items-center gap-2.5 mb-10">
           <p className="text-sm text-[#8a8478]">{user.email}</p>

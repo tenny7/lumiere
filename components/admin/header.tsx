@@ -43,10 +43,10 @@ export function AdminHeader() {
       if (!user) return
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, role")
+        .select("*")
         .eq("id", user.id)
         .single()
-      if (profile?.full_name) setName(profile.full_name)
+      if (profile) setName(profile.username || profile.full_name || "Admin")
       if (profile?.role) setRole(profile.role)
 
       const { count } = await supabase

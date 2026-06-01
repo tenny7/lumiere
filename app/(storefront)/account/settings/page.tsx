@@ -17,6 +17,7 @@ export default function SettingsPage() {
 
   // Profile
   const [fullName, setFullName] = useState("")
+  const [username, setUsername] = useState("")
   const [phone, setPhone] = useState("")
 
   // Addresses
@@ -24,8 +25,8 @@ export default function SettingsPage() {
     Array<{
       id: string
       label: string | null
-      line1: string
-      line2: string | null
+      line_1: string
+      line_2: string | null
       city: string
       region: string | null
       is_default: boolean
@@ -55,18 +56,19 @@ export default function SettingsPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, phone")
+        .select("*")
         .eq("id", user.id)
         .single()
 
       if (profile) {
         setFullName(profile.full_name || "")
+        setUsername(profile.username || "")
         setPhone(profile.phone || "")
       }
 
       const { data: addrs } = await supabase
         .from("addresses")
-        .select("id, label, line1, line2, city, region, is_default")
+        .select("id, label, line_1, line_2, city, region, is_default")
         .eq("profile_id", user.id)
         .order("is_default", { ascending: false })
 
@@ -90,11 +92,19 @@ export default function SettingsPage() {
 
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: fullName, phone })
+      .update({
+        full_name: fullName,
+        username: username.trim() || null,
+        phone,
+      })
       .eq("id", user.id)
 
     if (error) {
-      toast.error("Failed to update profile")
+      toast.error(
+        error.code === "23505"
+          ? "That username is already taken"
+          : "Failed to update profile",
+      )
     } else {
       toast.success("Profile updated")
     }
@@ -116,13 +126,13 @@ export default function SettingsPage() {
       .from("addresses")
       .insert({
         profile_id: user.id,
-        label: newLabel || null,
-        line1: newLine1,
+        label: newLabel || "home",
+        line_1: newLine1,
         city: newCity,
         region: newRegion || null,
         is_default: addresses.length === 0,
       })
-      .select("id, label, line1, line2, city, region, is_default")
+      .select("id, label, line_1, line_2, city, region, is_default")
       .single()
 
     if (error) {
@@ -246,6 +256,21 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                Username
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="A short display name (optional)"
+                className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
+              />
+              <p className="text-xs text-[#8a8478] mt-1.5">
+                Shown around the store instead of your email.
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
                 Phone Number
               </label>
               <input
@@ -295,8 +320,8 @@ export default function SettingsPage() {
                         {addr.label}
                       </span>
                     )}
-                    <p>{addr.line1}</p>
-                    {addr.line2 && <p className="text-[#8a8478]">{addr.line2}</p>}
+                    <p>{addr.line_1}</p>
+                    {addr.line_2 && <p className="text-[#8a8478]">{addr.line_2}</p>}
                     <p className="text-[#8a8478]">
                       {addr.city}
                       {addr.region && `, ${addr.region}`}
