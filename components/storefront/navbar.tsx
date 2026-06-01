@@ -3,8 +3,9 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search, User, ShoppingBag, Menu, X } from "lucide-react"
+import { Search, User, ShoppingBag, Menu, X, LayoutDashboard } from "lucide-react"
 import { useCartCount } from "@/hooks/use-cart-count"
+import { createClient } from "@/lib/supabase/client"
 
 const navLinks = [
   { href: "/products", label: "Shop All" },
@@ -20,12 +21,31 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const [isStaff, setIsStaff] = useState(false)
   const cartCount = useCartCount()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  // Show an Admin link for staff/admin users
+  useEffect(() => {
+    const supabase = createClient()
+    async function checkRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+      setIsStaff(!!profile && profile.role !== "customer")
+    }
+    checkRole()
   }, [])
 
   function submitSearch(e: React.FormEvent) {
@@ -79,6 +99,16 @@ export function Navbar() {
             >
               <Search className="w-[18px] h-[18px]" strokeWidth={1.5} />
             </button>
+            {isStaff && (
+              <Link
+                href="/admin"
+                aria-label="Admin dashboard"
+                title="Admin dashboard"
+                className="text-amber hover:text-amber-300 transition-colors"
+              >
+                <LayoutDashboard className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              </Link>
+            )}
             <Link
               href="/account"
               className="text-muted-foreground hover:text-warm-white transition-colors hidden sm:block"
@@ -148,6 +178,15 @@ export function Navbar() {
             >
               My Account
             </Link>
+            {isStaff && (
+              <Link
+                href="/admin"
+                className="block text-sm font-medium tracking-wider text-amber hover:text-amber-300 transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                Admin Dashboard
+              </Link>
+            )}
           </div>
         </div>
       )}

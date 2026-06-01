@@ -58,7 +58,11 @@ export function AdminSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href="/admin" className="flex items-center gap-2.5">
+        <Link
+          href="/"
+          title="View store"
+          className="flex items-center gap-2.5"
+        >
           <div className="w-8 h-8 bg-amber-500 rounded-md flex items-center justify-center">
             <Lightbulb className="w-4 h-4 text-black" />
           </div>

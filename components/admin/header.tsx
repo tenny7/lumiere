@@ -88,19 +88,32 @@ export function AdminHeader() {
       </form>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Notifications → pending orders */}
-        <button
-          onClick={() => router.push("/admin/orders")}
-          aria-label="Pending orders"
-          className="relative inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
-        >
-          <Bell className="w-4 h-4" />
-          {pending > 0 && (
-            <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-amber-500 text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
-              {pending > 9 ? "9+" : pending}
-            </span>
-          )}
-        </button>
+        {/* Notifications */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="Notifications"
+            className="relative inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors outline-none"
+          >
+            <Bell className="w-4 h-4" />
+            {pending > 0 && (
+              <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-1 bg-amber-500 text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
+                {pending > 9 ? "9+" : pending}
+              </span>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/admin/orders")}>
+              {pending > 0
+                ? `${pending} pending order${pending > 1 ? "s" : ""} to review`
+                : "No pending orders"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/admin/crm/activity")}>
+              View activity feed
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* User Menu */}
         <DropdownMenu>
@@ -115,6 +128,9 @@ export function AdminHeader() {
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/account")}>
+              My Account
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/admin/settings")}>
               Settings
             </DropdownMenuItem>
