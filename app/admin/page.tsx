@@ -4,6 +4,7 @@ import { formatCurrency, formatDateTime } from "@/lib/utils/format"
 import { ORDER_STATUS_LABELS } from "@/lib/utils/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GettingStarted, type OnboardingStep } from "@/components/admin/getting-started"
 import {
   ShoppingCart,
   DollarSign,
@@ -37,6 +38,9 @@ export default async function AdminDashboard() {
     { count: newCustomers },
     { count: lowStockCount },
     { data: recentOrders },
+    { count: productCount },
+    { count: featuredCount },
+    { data: storePhoneRow },
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -61,7 +65,46 @@ export default async function AdminDashboard() {
       .select("*, customer:profiles(full_name, email)")
       .order("created_at", { ascending: false })
       .limit(6),
+    supabase.from("products").select("id", { count: "exact", head: true }),
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("is_featured", true),
+    supabase
+      .from("store_settings")
+      .select("value")
+      .eq("key", "store_phone")
+      .maybeSingle(),
   ])
+
+  const storePhone =
+    typeof storePhoneRow?.value === "string" ? storePhoneRow.value : ""
+  const onboardingSteps: OnboardingStep[] = [
+    {
+      key: "product",
+      label: "Add your first product",
+      description: "Build your catalogue so customers have something to buy.",
+      href: "/admin/products/new",
+      cta: "Add product",
+      done: (productCount ?? 0) > 0,
+    },
+    {
+      key: "featured",
+      label: "Feature a product on the homepage",
+      description: "Featured products headline your storefront.",
+      href: "/admin/products",
+      cta: "Choose products",
+      done: (featuredCount ?? 0) > 0,
+    },
+    {
+      key: "details",
+      label: "Complete your store details",
+      description: "Set your store name, contact, and address.",
+      href: "/admin/settings",
+      cta: "Open settings",
+      done: storePhone.length > 0 && !storePhone.includes("XX"),
+    },
+  ]
 
   const revenueToday = (todayOrders || [])
     .filter((o) => o.status !== "cancelled" && o.status !== "refunded")
@@ -100,18 +143,25 @@ export default async function AdminDashboard() {
         </p>
       </div>
 
+      {/* First-run onboarding (hides once complete or dismissed) */}
+      <GettingStarted steps={onboardingSteps} />
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+            <CardContent className="flex items-center gap-4 p-5">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+                <stat.icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {stat.title}
+                </p>
+                <p className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
+                  {stat.value}
+                </p>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -169,9 +219,23 @@ export default async function AdminDashboard() {
                 </Link>
               ))}
               {(!recentOrders || recentOrders.length === 0) && (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  No orders yet
-                </p>
+                <div className="flex flex-col items-center gap-3 py-10 text-center">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">No orders yet</p>
+                    <p className="text-xs text-muted-foreground">
+                      Orders appear here as customers check out.
+                    </p>
+                  </div>
+                  <Link
+                    href="/"
+                    className="text-xs font-medium text-amber-600 hover:text-amber-700"
+                  >
+                    View your storefront &rarr;
+                  </Link>
+                </div>
               )}
             </div>
           </CardContent>
