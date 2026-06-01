@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, User, MapPin, CreditCard } from "lucide-react"
+import { ArrowLeft, User, MapPin, CreditCard, FileText } from "lucide-react"
 import { OrderStatusUpdater } from "./status-updater"
 
 const statusColors: Record<string, string> = {
@@ -109,6 +109,20 @@ export default async function OrderDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            render={
+              <a
+                href={`/invoice/${order.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Invoice
+          </Button>
           <Badge
             variant="secondary"
             className={`text-[0.6rem] ${statusColors[order.status]}`}

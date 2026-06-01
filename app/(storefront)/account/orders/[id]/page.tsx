@@ -114,6 +114,18 @@ export default async function OrderDetailPage({
           </div>
         </div>
 
+        {/* Invoice */}
+        <div className="mb-10">
+          <a
+            href={`/invoice/${order.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-white/15 px-4 py-2 text-[0.7rem] font-medium tracking-[0.15em] uppercase hover:border-amber-500/50 hover:text-amber-400 transition-colors"
+          >
+            View / Download Invoice
+          </a>
+        </div>
+
         {/* Tracking timeline */}
         <div className="mb-10">
           <h2 className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-5">
