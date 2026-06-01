@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Cormorant_Garamond, Outfit } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
@@ -15,6 +15,11 @@ const sans = Outfit({
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600"],
 })
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+}
 
 export const metadata: Metadata = {
   title: "Lumiere — Curated Light for Every Space",

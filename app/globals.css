@@ -135,6 +135,20 @@
   }
 }
 
+/* Prevent iOS Safari from auto-zooming the whole page when a form field is
+   focused. Mobile Safari zooms in whenever the focused input/textarea/select
+   has a font-size below 16px (many inputs here use text-sm = 14px). Forcing
+   16px on small screens stops the zoom/distortion. This rule is intentionally
+   unlayered so it overrides Tailwind's text-sm utility on mobile only;
+   desktop keeps the smaller size. */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Storefront custom utilities */
 @layer utilities {
   .font-serif {
