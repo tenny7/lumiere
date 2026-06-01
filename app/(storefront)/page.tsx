@@ -1,6 +1,9 @@
 import Link from "next/link"
 import { ArrowRight, Truck, Shield, RotateCcw, Headphones } from "lucide-react"
 import { NewsletterForm } from "@/components/storefront/newsletter-form"
+import { createClient } from "@/lib/supabase/server"
+import { getStoreCurrency } from "@/lib/utils/settings"
+import { formatCurrency } from "@/lib/utils/format"
 
 const categories = [
   { name: "Chandeliers", slug: "chandeliers", count: 124, accent: "from-amber-900/20 to-transparent" },
@@ -11,13 +14,6 @@ const categories = [
   { name: "LED Strips", slug: "led-strips", count: 67, accent: "from-orange-900/20 to-transparent" },
 ]
 
-const featuredProducts = [
-  { name: "Aurelia Globe", type: "Pendant Light", price: 420, tag: "New", slug: "aurelia-globe" },
-  { name: "Silhouette Desk", type: "Table Lamp", price: 285, slug: "silhouette-desk" },
-  { name: "Cascade Trio", type: "Cluster Pendant", price: 560, originalPrice: 800, tag: "Sale", slug: "cascade-trio" },
-  { name: "Halo Column", type: "Smart Floor Lamp", price: 395, tag: "Smart", slug: "halo-column" },
-]
-
 const services = [
   { icon: Shield, title: "5-Year Warranty", desc: "Every fixture protected against defects" },
   { icon: Truck, title: "Free Delivery", desc: "On all orders over RWF 50,000" },
@@ -25,7 +21,44 @@ const services = [
   { icon: Headphones, title: "Expert Support", desc: "Real designers, available 7 days a week" },
 ]
 
-export default function HomePage() {
+type FeaturedProduct = {
+  id: string
+  name: string
+  slug: string
+  base_price: number
+  sale_price: number | null
+  category: { name: string } | null
+  images: Array<{ url: string; is_primary: boolean }>
+}
+
+export default async function HomePage() {
+  const supabase = await createClient()
+  const storeCurrency = await getStoreCurrency()
+
+  // Real featured products (fall back to newest active products)
+  let { data: featuredProducts } = await supabase
+    .from("products")
+    .select(
+      "id, name, slug, base_price, sale_price, category:categories(name), images:product_images(url, is_primary)",
+    )
+    .eq("is_active", true)
+    .eq("is_featured", true)
+    .limit(4)
+
+  if (!featuredProducts || featuredProducts.length === 0) {
+    const { data } = await supabase
+      .from("products")
+      .select(
+        "id, name, slug, base_price, sale_price, category:categories(name), images:product_images(url, is_primary)",
+      )
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(4)
+    featuredProducts = data
+  }
+
+  const featured = (featuredProducts || []) as unknown as FeaturedProduct[]
+
   return (
     <>
       {/* ═══ HERO ═══ */}
@@ -162,44 +195,48 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          {featuredProducts.map((product) => (
-            <Link
-              key={product.slug}
-              href={`/products/${product.slug}`}
-              className="group"
-            >
-              <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-4">
-                <div className="absolute inset-0 bg-gradient-radial from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                {product.tag && (
-                  <span
-                    className={`absolute top-3 left-3 px-2.5 py-1 text-[0.55rem] tracking-[0.2em] uppercase font-medium ${
-                      product.tag === "Sale"
-                        ? "bg-rose-500 text-white"
-                        : product.tag === "Smart"
-                          ? "bg-white/10 text-sky-300 border border-sky-300/20"
-                          : "bg-amber-500 text-black"
-                    }`}
-                  >
-                    {product.tag === "Sale" ? "-30%" : product.tag}
-                  </span>
-                )}
-              </div>
-              <h3 className="font-serif text-base font-normal mb-1">
-                {product.name}
-              </h3>
-              <p className="text-[0.68rem] text-[#8a8478] tracking-[0.08em] uppercase mb-1.5">
-                {product.type}
-              </p>
-              <p className="text-sm font-light">
-                RWF {product.price}
-                {product.originalPrice && (
-                  <span className="text-[#8a8478] line-through ml-2 text-xs">
-                    RWF {product.originalPrice}
-                  </span>
-                )}
-              </p>
-            </Link>
-          ))}
+          {featured.map((product) => {
+            const img =
+              product.images?.find((i) => i.is_primary) || product.images?.[0]
+            return (
+              <Link
+                key={product.id}
+                href={`/products/${product.slug}`}
+                className="group"
+              >
+                <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-4">
+                  <div className="absolute inset-0 bg-gradient-radial from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
+                  {img ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={img.url}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : null}
+                  {product.sale_price && (
+                    <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[0.55rem] tracking-[0.2em] uppercase font-medium bg-rose-500 text-white">
+                      Sale
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-serif text-base font-normal mb-1">
+                  {product.name}
+                </h3>
+                <p className="text-[0.68rem] text-[#8a8478] tracking-[0.08em] uppercase mb-1.5">
+                  {product.category?.name || "Lighting"}
+                </p>
+                <p className="text-sm font-light">
+                  {formatCurrency(product.sale_price || product.base_price, storeCurrency)}
+                  {product.sale_price && (
+                    <span className="text-[#8a8478] line-through ml-2 text-xs">
+                      {formatCurrency(product.base_price, storeCurrency)}
+                    </span>
+                  )}
+                </p>
+              </Link>
+            )
+          })}
         </div>
       </section>
 

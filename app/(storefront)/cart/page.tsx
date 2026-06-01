@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils/format"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { CartItems } from "@/components/storefront/cart-items"
+import { GuestCart } from "@/components/storefront/guest-cart"
 import { ShoppingBag } from "lucide-react"
 
 export default async function CartPage() {
@@ -56,7 +57,9 @@ export default async function CartPage() {
           Your Cart
         </h1>
 
-        {cartItems.length > 0 ? (
+        {!user ? (
+          <GuestCart currency={storeCurrency} />
+        ) : cartItems.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             <div className="lg:col-span-2">
               <CartItems items={cartItems} currency={storeCurrency} />
