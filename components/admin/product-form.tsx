@@ -19,8 +19,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Info } from "lucide-react"
 import { ProductImageManager } from "@/components/admin/product-image-manager"
 import type { Category, Product } from "@/lib/types"
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={<span />}
+          aria-label="More information"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors cursor-help"
+        >
+          <Info className="w-3.5 h-3.5" />
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[220px] text-xs leading-relaxed">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
 
 export function ProductForm({ product }: { product?: Product }) {
   const router = useRouter()
@@ -155,14 +181,21 @@ export function ProductForm({ product }: { product?: Product }) {
                 />
               </div>
               <div className="col-span-2">
-                <Label htmlFor="slug">Slug</Label>
+                <Label htmlFor="slug" className="flex items-center gap-1.5">
+                  Slug
+                  <InfoTip text="The product's URL path. Generated automatically from the product name." />
+                </Label>
                 <Input
                   id="slug"
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="aurelia-globe-pendant"
-                  required
+                  readOnly
+                  tabIndex={-1}
+                  placeholder="auto-generated-from-name"
+                  className="bg-muted/40 text-muted-foreground cursor-not-allowed"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Auto-generated from the product name.
+                </p>
               </div>
             </div>
             <div>
@@ -195,7 +228,10 @@ export function ProductForm({ product }: { product?: Product }) {
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="basePrice">Base Price (RWF)</Label>
+                <Label htmlFor="basePrice" className="flex items-center gap-1.5">
+                  Base Price (RWF)
+                  <InfoTip text="The standard selling price customers pay before any discount. Required." />
+                </Label>
                 <Input
                   id="basePrice"
                   type="number"
@@ -206,7 +242,10 @@ export function ProductForm({ product }: { product?: Product }) {
                 />
               </div>
               <div>
-                <Label htmlFor="salePrice">Sale Price (RWF)</Label>
+                <Label htmlFor="salePrice" className="flex items-center gap-1.5">
+                  Sale Price (RWF)
+                  <InfoTip text="Discounted price shown to customers instead of the base price. Leave empty if the product isn't on sale." />
+                </Label>
                 <Input
                   id="salePrice"
                   type="number"
@@ -217,7 +256,10 @@ export function ProductForm({ product }: { product?: Product }) {
                 />
               </div>
               <div>
-                <Label htmlFor="costPrice">Cost Price (RWF)</Label>
+                <Label htmlFor="costPrice" className="flex items-center gap-1.5">
+                  Cost Price (RWF)
+                  <InfoTip text="What this item costs you to stock. Used for profit/margin reporting only — never shown to customers. Optional." />
+                </Label>
                 <Input
                   id="costPrice"
                   type="number"
@@ -269,7 +311,13 @@ export function ProductForm({ product }: { product?: Product }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Specifications</CardTitle>
+            <CardTitle className="flex items-center gap-1.5">
+              Specifications
+              <InfoTip text="All specification fields are optional — fill in only what you know." />
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Optional — leave any you don&apos;t know blank.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
