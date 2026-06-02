@@ -31,17 +31,17 @@ export function GettingStarted({ steps }: { steps: OnboardingStep[] }) {
   if (hidden || doneCount === steps.length) return null
 
   return (
-    <section className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-card p-5 sm:p-6">
+    <section className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
             <Rocket className="h-4.5 w-4.5" />
           </span>
           <div>
-            <h2 className="text-base font-semibold text-neutral-900">
+            <h2 className="text-base font-semibold text-foreground">
               Get your store ready
             </h2>
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-muted-foreground">
               A few steps to launch Ajabu Lighting.
             </p>
           </div>
@@ -52,7 +52,7 @@ export function GettingStarted({ steps }: { steps: OnboardingStep[] }) {
             setHidden(true)
           }}
           aria-label="Dismiss getting started"
-          className="text-neutral-400 hover:text-neutral-700 transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -60,26 +60,26 @@ export function GettingStarted({ steps }: { steps: OnboardingStep[] }) {
 
       {/* Progress */}
       <div className="mt-5 flex items-center gap-3">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-amber-100">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-amber-500/15">
           <div
             className="h-full rounded-full bg-amber-500 transition-[width] duration-500"
             style={{ width: `${(doneCount / steps.length) * 100}%` }}
           />
         </div>
-        <span className="text-xs font-medium tabular-nums text-neutral-500">
+        <span className="text-xs font-medium tabular-nums text-muted-foreground">
           {doneCount}/{steps.length}
         </span>
       </div>
 
       {/* Steps */}
-      <ol className="mt-2 divide-y divide-amber-100/70">
+      <ol className="mt-2 divide-y divide-border/60">
         {steps.map((step) => (
           <li key={step.key} className="flex items-center gap-3 py-3">
             <span
               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
                 step.done
                   ? "border-emerald-500 bg-emerald-500 text-white"
-                  : "border-neutral-300 text-transparent"
+                  : "border-border text-transparent"
               }`}
             >
               <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -88,18 +88,18 @@ export function GettingStarted({ steps }: { steps: OnboardingStep[] }) {
               <p
                 className={`text-sm font-medium ${
                   step.done
-                    ? "text-neutral-400 line-through"
-                    : "text-neutral-900"
+                    ? "text-muted-foreground line-through"
+                    : "text-foreground"
                 }`}
               >
                 {step.label}
               </p>
-              <p className="text-xs text-neutral-500">{step.description}</p>
+              <p className="text-xs text-muted-foreground">{step.description}</p>
             </div>
             {!step.done && (
               <Link
                 href={step.href}
-                className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 transition-colors"
+                className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-500 transition-colors"
               >
                 {step.cta}
                 <ArrowRight className="h-3 w-3" />
