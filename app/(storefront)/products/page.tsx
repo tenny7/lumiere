@@ -2,6 +2,8 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils/format"
 import { getStoreCurrency } from "@/lib/utils/settings"
+import { ProductCardActions } from "@/components/storefront/product-card-actions"
+import { ShopTip } from "@/components/storefront/shop-tip"
 import { ArrowRight } from "lucide-react"
 
 export default async function ProductsPage({
@@ -133,6 +135,7 @@ export default async function ProductsPage({
 
           {/* Product Grid */}
           <div className="flex-1">
+            <ShopTip />
             {products && products.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
@@ -142,11 +145,15 @@ export default async function ProductsPage({
                     ) || product.images?.[0]
 
                     return (
-                      <Link
-                        key={product.id}
-                        href={`/products/${product.slug}`}
-                        className="group"
-                      >
+                      <div key={product.id} className="group relative">
+                        <ProductCardActions
+                          productId={product.id}
+                          className="absolute top-3 right-3 z-20"
+                        />
+                        <Link
+                          href={`/products/${product.slug}`}
+                          className="block"
+                        >
                         <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-3">
                           {primaryImage ? (
                             <img
@@ -182,7 +189,8 @@ export default async function ProductsPage({
                             </span>
                           )}
                         </p>
-                      </Link>
+                        </Link>
+                      </div>
                     )
                   })}
                 </div>

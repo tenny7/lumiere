@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Bell, Search } from "lucide-react"
+import { Bell, Search, Sun, Moon } from "lucide-react"
+import { useAdminTheme } from "@/components/admin/admin-theme"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
 import {
@@ -29,6 +30,7 @@ function initials(name: string) {
 
 export function AdminHeader() {
   const router = useRouter()
+  const { theme, toggle } = useAdminTheme()
   const [query, setQuery] = useState("")
   const [name, setName] = useState("Admin")
   const [role, setRole] = useState<string | null>(null)
@@ -91,6 +93,20 @@ export function AdminHeader() {
       </form>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Theme toggle */}
+        <button
+          onClick={toggle}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+          className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+        >
+          {theme === "dark" ? (
+            <Sun className="w-4 h-4" />
+          ) : (
+            <Moon className="w-4 h-4" />
+          )}
+        </button>
+
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger
