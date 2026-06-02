@@ -3,10 +3,11 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search, User, ShoppingBag, Menu, X, LayoutDashboard, Heart } from "lucide-react"
+import { Search, User, ShoppingBag, Menu, X, LayoutDashboard, Heart, HelpCircle } from "lucide-react"
 import { useCartCount } from "@/hooks/use-cart-count"
 import { useWishlistCount } from "@/hooks/use-wishlist-count"
 import { createClient } from "@/lib/supabase/client"
+import { TOUR_EVENT } from "@/components/storefront/welcome-tour"
 
 const navLinks = [
   { href: "/products", label: "Shop All" },
@@ -49,6 +50,11 @@ export function Navbar() {
     }
     checkRole()
   }, [])
+
+  function openTour() {
+    setMobileOpen(false)
+    window.dispatchEvent(new Event(TOUR_EVENT))
+  }
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -100,6 +106,14 @@ export function Navbar() {
               className="text-muted-foreground hover:text-warm-white transition-colors"
             >
               <Search className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={openTour}
+              aria-label="Take a quick tour"
+              title="Take a quick tour"
+              className="hidden sm:block text-muted-foreground hover:text-amber transition-colors"
+            >
+              <HelpCircle className="w-[18px] h-[18px]" strokeWidth={1.5} />
             </button>
             {isStaff && (
               <Link
@@ -195,6 +209,13 @@ export function Navbar() {
             >
               My Account
             </Link>
+            <button
+              onClick={openTour}
+              className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" strokeWidth={1.5} />
+              Take a quick tour
+            </button>
             {isStaff && (
               <Link
                 href="/admin"

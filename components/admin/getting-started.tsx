@@ -20,7 +20,13 @@ const STORAGE_KEY = "ajabu_admin_onboarding_dismissed"
  * or the admin dismisses it. Rendered client-side so it can be dismissed and
  * so it never flashes for set-up stores.
  */
-export function GettingStarted({ steps }: { steps: OnboardingStep[] }) {
+export function GettingStarted({
+  steps,
+  className = "",
+}: {
+  steps: OnboardingStep[]
+  className?: string
+}) {
   const [hidden, setHidden] = useState(true)
 
   useEffect(() => {
@@ -31,7 +37,9 @@ export function GettingStarted({ steps }: { steps: OnboardingStep[] }) {
   if (hidden || doneCount === steps.length) return null
 
   return (
-    <section className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-5 sm:p-6">
+    <section
+      className={`rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-5 sm:p-6 ${className}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">

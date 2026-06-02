@@ -10,7 +10,7 @@ const STEPS = [
   {
     icon: Search,
     title: "Welcome to Ajabu Lighting",
-    body: "Curated lighting, delivered. Here's how to shop in under a minute — it's quick.",
+    body: "Curated lighting, delivered. Here's how to shop in under a minute.",
   },
   {
     icon: Heart,
@@ -29,14 +29,34 @@ const STEPS = [
   },
 ] as const
 
+export const TOUR_EVENT = "ajabu:tour:open"
+
 export function WelcomeTour() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
 
+  // The tour no longer hijacks the first visit. It opens on demand when the
+  // header trigger dispatches the open event.
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) !== "1") setOpen(true)
+    function handleOpen() {
+      setStep(0)
+      setOpen(true)
+    }
+    window.addEventListener(TOUR_EVENT, handleOpen)
+    return () => window.removeEventListener(TOUR_EVENT, handleOpen)
   }, [])
+
+  // Close on Escape for keyboard users.
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") finish(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   if (!open) return null
 

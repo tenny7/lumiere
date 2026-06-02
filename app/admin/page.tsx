@@ -136,7 +136,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="dash-rise" style={{ "--i": 0 } as React.CSSProperties}>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
           Welcome back. Here&apos;s what&apos;s happening with your store today.
@@ -144,14 +144,21 @@ export default async function AdminDashboard() {
       </div>
 
       {/* First-run onboarding (hides once complete or dismissed) */}
-      <GettingStarted steps={onboardingSteps} />
+      <GettingStarted
+        steps={onboardingSteps}
+        className="dash-rise"
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
+        {stats.map((stat, i) => (
+          <Card
+            key={stat.title}
+            className="group dash-rise transition-[transform,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-amber-500/40 hover:shadow-md"
+            style={{ "--i": i + 1 } as React.CSSProperties}
+          >
             <CardContent className="flex items-center gap-4 p-5">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition-transform duration-200 ease-out group-hover:scale-105">
                 <stat.icon className="h-5 w-5" />
               </span>
               <div className="min-w-0">
@@ -169,7 +176,10 @@ export default async function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Orders */}
-        <Card className="lg:col-span-2">
+        <Card
+          className="lg:col-span-2 dash-rise"
+          style={{ "--i": 5 } as React.CSSProperties}
+        >
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Recent Orders</CardTitle>
             <Link
@@ -242,7 +252,7 @@ export default async function AdminDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="dash-rise" style={{ "--i": 6 } as React.CSSProperties}>
           <CardHeader>
             <CardTitle className="text-base">Quick Actions</CardTitle>
           </CardHeader>
