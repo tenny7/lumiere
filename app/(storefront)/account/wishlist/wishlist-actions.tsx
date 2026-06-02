@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
+import { notifyWishlistUpdated } from "@/hooks/use-wishlist-count"
 import { toast } from "sonner"
 import { ShoppingBag, X } from "lucide-react"
 
@@ -28,6 +29,7 @@ export function WishlistActions({
     if (error) {
       toast.error("Failed to remove item")
     } else {
+      notifyWishlistUpdated()
       toast.success("Removed from wishlist")
       router.refresh()
     }
@@ -59,7 +61,9 @@ export function WishlistActions({
       toast.error("Failed to add to cart")
     } else {
       notifyCartUpdated()
-      toast.success("Added to cart")
+      toast.success("Added to cart", {
+        action: { label: "View cart", onClick: () => router.push("/cart") },
+      })
     }
     setLoading(false)
   }

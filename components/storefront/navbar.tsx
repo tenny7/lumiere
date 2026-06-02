@@ -3,8 +3,9 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search, User, ShoppingBag, Menu, X, LayoutDashboard } from "lucide-react"
+import { Search, User, ShoppingBag, Menu, X, LayoutDashboard, Heart } from "lucide-react"
 import { useCartCount } from "@/hooks/use-cart-count"
+import { useWishlistCount } from "@/hooks/use-wishlist-count"
 import { createClient } from "@/lib/supabase/client"
 
 const navLinks = [
@@ -23,6 +24,7 @@ export function Navbar() {
   const [query, setQuery] = useState("")
   const [isStaff, setIsStaff] = useState(false)
   const cartCount = useCartCount()
+  const wishlistCount = useWishlistCount()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40)
@@ -109,6 +111,21 @@ export function Navbar() {
                 <LayoutDashboard className="w-[18px] h-[18px]" strokeWidth={1.5} />
               </Link>
             )}
+            <Link
+              href="/account/wishlist"
+              aria-label="Wishlist"
+              className="text-muted-foreground hover:text-warm-white transition-colors relative"
+            >
+              <Heart
+                className={`w-[18px] h-[18px] ${wishlistCount > 0 ? "fill-amber text-amber" : ""}`}
+                strokeWidth={1.5}
+              />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 w-4 h-4 bg-amber text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
+                  {wishlistCount > 99 ? "99+" : wishlistCount}
+                </span>
+              )}
+            </Link>
             <Link
               href="/account"
               className="text-muted-foreground hover:text-warm-white transition-colors hidden sm:block"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { ShoppingBag, Minus, Plus, Heart } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
+import { notifyWishlistUpdated } from "@/hooks/use-wishlist-count"
 import { formatCurrency } from "@/lib/utils/format"
 import { toast } from "sonner"
 
@@ -67,7 +68,9 @@ export function ProductInteractions({
       }
       localStorage.setItem("lumiere_cart", JSON.stringify(cart))
       notifyCartUpdated()
-      toast.success("Added to cart")
+      toast.success("Added to cart", {
+        action: { label: "View cart", onClick: () => router.push("/cart") },
+      })
       setLoading(false)
       return
     }
@@ -86,7 +89,9 @@ export function ProductInteractions({
       toast.error("Failed to add to cart")
     } else {
       notifyCartUpdated()
-      toast.success("Added to cart")
+      toast.success("Added to cart", {
+        action: { label: "View cart", onClick: () => router.push("/cart") },
+      })
     }
     setLoading(false)
   }
@@ -115,6 +120,7 @@ export function ProductInteractions({
         toast.error("Failed to update wishlist")
       } else {
         setWishlisted(false)
+        notifyWishlistUpdated()
         toast.success("Removed from wishlist")
       }
     } else {
@@ -125,7 +131,13 @@ export function ProductInteractions({
         toast.error("Failed to update wishlist")
       } else {
         setWishlisted(true)
-        toast.success("Saved to wishlist")
+        notifyWishlistUpdated()
+        toast.success("Saved to wishlist", {
+          action: {
+            label: "View wishlist",
+            onClick: () => router.push("/account/wishlist"),
+          },
+        })
       }
     }
     setWishLoading(false)
