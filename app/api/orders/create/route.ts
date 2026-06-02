@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { evaluateCoupon, type CouponRow } from "@/lib/utils/coupon"
 import { getStoreCurrency } from "@/lib/utils/settings"
-import { normalizeRwandaPhone } from "@/lib/utils/phone"
+import { normalizeInternationalPhone } from "@/lib/utils/phone"
 import { z } from "zod"
 
 const shippingSchema = z.object({
@@ -38,17 +38,17 @@ export async function POST(request: NextRequest) {
 
     const { fullName, phone: rawPhone, line1, city, region, couponCode } = parsed.data
 
-    const normalizedPhone = normalizeRwandaPhone(rawPhone)
+    const normalizedPhone = normalizeInternationalPhone(rawPhone)
     if (!normalizedPhone) {
       return NextResponse.json(
         {
           error:
-            "Invalid phone number. Use a Rwandan mobile number, e.g. 0781234567 or +250 781 234 567.",
+            "Please enter a valid phone number including your country code, e.g. +250 781 234 567.",
         },
         { status: 400 },
       )
     }
-    const phone = normalizedPhone.national
+    const phone = normalizedPhone.display
 
     // Load cart items from DB with current prices (server-side truth)
     const { data: cartItems, error: cartError } = await supabase

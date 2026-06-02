@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requestToPay } from "@/lib/momo/client"
-import { normalizeRwandaPhone } from "@/lib/utils/phone"
+import { normalizeInternationalPhone } from "@/lib/utils/phone"
 import { z } from "zod"
 
 const initiateSchema = z.object({
@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
 
     const { orderId, provider, phoneNumber: rawPhone } = parsed.data
 
-    const normalizedPhone = normalizeRwandaPhone(rawPhone)
+    const normalizedPhone = normalizeInternationalPhone(rawPhone)
     if (!normalizedPhone) {
       return NextResponse.json(
         {
           error:
-            "Invalid phone number. Use a Rwandan mobile number, e.g. 0781234567 or +250 781 234 567.",
+            "Please enter a valid mobile money number including the country code, e.g. +250 781 234 567.",
         },
         { status: 400 },
       )
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         order_id: orderId,
         provider,
         provider_reference: referenceId,
-        phone_number: normalizedPhone.national,
+        phone_number: normalizedPhone.display,
         amount: order.total,
         currency: order.currency,
         status: "pending",

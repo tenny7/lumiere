@@ -1,4 +1,21 @@
 /**
+ * Normalize any international phone number. Accepts an optional leading "+" and
+ * any country code, with spaces/dashes/parens. Validates a plausible E.164
+ * length (7–15 digits). Returns the display form (keeps a leading "+" if given)
+ * and the MSISDN (digits only). Use this for orders that can come from anywhere.
+ */
+export function normalizeInternationalPhone(
+  input: string,
+): { display: string; msisdn: string } | null {
+  if (!input) return null
+  const hasPlus = input.trim().startsWith("+")
+  let digits = input.replace(/\D/g, "")
+  if (digits.startsWith("00")) digits = digits.slice(2) // 00 intl prefix → drop
+  if (digits.length < 7 || digits.length > 15) return null
+  return { display: hasPlus ? `+${digits}` : digits, msisdn: digits }
+}
+
+/**
  * Normalize a Rwandan mobile number entered in any common form into both the
  * local national format (07XXXXXXXX) and MoMo MSISDN format (2507XXXXXXXX).
  *

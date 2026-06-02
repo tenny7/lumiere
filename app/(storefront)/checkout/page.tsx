@@ -43,6 +43,9 @@ export default function CheckoutPage() {
   } | null>(null)
 
   // Payment
+  const [availableProviders, setAvailableProviders] = useState<
+    (typeof MOMO_PROVIDERS)[number][]
+  >([...MOMO_PROVIDERS])
   const [provider, setProvider] = useState<string>("momo_mtn")
   const [momoPhone, setMomoPhone] = useState("")
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "polling" | "success" | "failed">("idle")
@@ -81,6 +84,21 @@ export default function CheckoutPage() {
         setCartItems(data as any)
       } else {
         router.push("/cart")
+      }
+
+      // Only show the payment methods the admin has enabled.
+      const { data: apRow } = await supabase
+        .from("store_settings")
+        .select("value")
+        .eq("key", "active_payment_providers")
+        .maybeSingle()
+      const active = Array.isArray(apRow?.value) ? (apRow.value as string[]) : null
+      if (active && active.length > 0) {
+        const filtered = MOMO_PROVIDERS.filter((p) => active.includes(p.value))
+        if (filtered.length > 0) {
+          setAvailableProviders(filtered)
+          setProvider(filtered[0].value)
+        }
       }
     }
     loadCart()
@@ -292,7 +310,7 @@ export default function CheckoutPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0781234567 or +250 781 234 567"
+                  placeholder="+250 781 234 567 (with country code)"
                   required
                   className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
                 />
@@ -445,7 +463,7 @@ export default function CheckoutPage() {
                     Select Provider
                   </p>
                   <div className="grid grid-cols-3 gap-3">
-                    {MOMO_PROVIDERS.map((p) => (
+                    {availableProviders.map((p) => (
                       <button
                         key={p.value}
                         onClick={() => setProvider(p.value)}
@@ -478,7 +496,7 @@ export default function CheckoutPage() {
                       type="tel"
                       value={momoPhone}
                       onChange={(e) => setMomoPhone(e.target.value)}
-                      placeholder="0781234567 or +250 781 234 567"
+                      placeholder="+250 781 234 567 (with country code)"
                       required
                       className="w-full pl-10 pr-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
                     />

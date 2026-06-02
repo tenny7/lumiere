@@ -8,9 +8,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Save } from "lucide-react"
 import { toast } from "sonner"
+
+const ALL_PROVIDER_VALUES = MOMO_PROVIDERS.map((p) => p.value)
+
+function parseProviders(value: unknown): string[] | null {
+  if (Array.isArray(value)) return value as string[]
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
 
 const FIELDS = [
   { key: "delivery_fee", label: "Standard Delivery Fee (RWF)" },
@@ -20,6 +35,7 @@ const FIELDS = [
 export default function PaymentSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [original, setOriginal] = useState<Record<string, string>>({})
+  const [activeProviders, setActiveProviders] = useState<string[]>(ALL_PROVIDER_VALUES)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -28,15 +44,40 @@ export default function PaymentSettingsPage() {
       const supabase = createClient()
       const { data } = await supabase.from("store_settings").select("key, value")
       const map: Record<string, string> = {}
-      data?.forEach((row: { key: string; value: string }) => {
+      data?.forEach((row: { key: string; value: unknown }) => {
         map[row.key] = String(row.value)
       })
       setSettings(map)
       setOriginal(map)
+      const apRow = data?.find((r) => r.key === "active_payment_providers")
+      setActiveProviders(parseProviders(apRow?.value) ?? ALL_PROVIDER_VALUES)
       setLoading(false)
     }
     load()
   }, [])
+
+  async function toggleProvider(value: string) {
+    const next = activeProviders.includes(value)
+      ? activeProviders.filter((v) => v !== value)
+      : [...activeProviders, value]
+    if (next.length === 0) {
+      toast.error("Keep at least one payment method active")
+      return
+    }
+    setActiveProviders(next)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from("store_settings")
+      .upsert(
+        { key: "active_payment_providers", value: next },
+        { onConflict: "key" },
+      )
+    if (error) {
+      toast.error("Failed to update payment methods")
+    } else {
+      toast.success("Payment methods updated")
+    }
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -108,22 +149,30 @@ export default function PaymentSettingsPage() {
         <CardHeader>
           <CardTitle className="text-base">Mobile Money Providers</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Customers can pay via the following MTN MoMo providers at checkout.
-            Configure API credentials in your environment variables.
+        <CardContent className="space-y-1">
+          <p className="text-sm text-muted-foreground mb-3">
+            Turn payment methods on or off. Only the active ones appear to
+            customers at checkout.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {MOMO_PROVIDERS.map((p) => (
-              <Badge
-                key={p.value}
-                variant="secondary"
-                style={{ color: p.color }}
-              >
-                {p.label}
-              </Badge>
-            ))}
-          </div>
+          {MOMO_PROVIDERS.map((p) => (
+            <div
+              key={p.value}
+              className="flex items-center justify-between py-2.5 border-b last:border-0"
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: p.color }}
+                />
+                <span className="text-sm font-medium">{p.label}</span>
+              </div>
+              <Switch
+                checked={activeProviders.includes(p.value)}
+                onCheckedChange={() => toggleProvider(p.value)}
+                aria-label={`Toggle ${p.label}`}
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
