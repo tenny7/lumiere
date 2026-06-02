@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/storefront/navbar"
 import { Footer } from "@/components/storefront/footer"
+import { WelcomeTour } from "@/components/storefront/welcome-tour"
 
 export default function StorefrontLayout({
   children,
@@ -11,6 +12,7 @@ export default function StorefrontLayout({
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <WelcomeTour />
     </div>
   )
 }

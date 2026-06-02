@@ -160,6 +160,12 @@
   .text-amber {
     color: #d4a853;
   }
+  .bg-amber {
+    background-color: #d4a853;
+  }
+  .fill-amber {
+    fill: #d4a853;
+  }
   .bg-gradient-radial {
     background: radial-gradient(ellipse at center, var(--tw-gradient-from), var(--tw-gradient-to));
   }
