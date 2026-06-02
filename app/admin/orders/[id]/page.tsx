@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table"
 import { ArrowLeft, User, MapPin, CreditCard, FileText } from "lucide-react"
 import { OrderStatusUpdater } from "./status-updater"
+import { MarkPaidButton } from "@/components/admin/mark-paid-button"
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500",
@@ -301,7 +302,10 @@ export default async function OrderDetailPage({
               <CardHeader>
                 <CardTitle className="text-base">Update Status</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                {payment?.status !== "successful" && (
+                  <MarkPaidButton orderId={order.id} />
+                )}
                 <OrderStatusUpdater
                   orderId={order.id}
                   currentStatus={order.status}
