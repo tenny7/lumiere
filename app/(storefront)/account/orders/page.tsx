@@ -5,6 +5,8 @@ import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { ORDER_STATUS_LABELS } from "@/lib/utils/constants"
 import { ArrowLeft, ArrowRight, Package } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-400 border-amber-500/20",
   confirmed: "bg-blue-500/15 text-blue-400 border-blue-500/20",

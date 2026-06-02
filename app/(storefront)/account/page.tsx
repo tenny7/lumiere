@@ -4,6 +4,8 @@ import Link from "next/link"
 import { Package, Heart, Settings, LogOut, Sparkles, ArrowRight } from "lucide-react"
 import { RoleBadge } from "@/components/role-badge"
 
+export const dynamic = "force-dynamic"
+
 export default async function AccountPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

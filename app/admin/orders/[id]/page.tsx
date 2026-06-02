@@ -18,6 +18,8 @@ import { ArrowLeft, User, MapPin, CreditCard, FileText } from "lucide-react"
 import { OrderStatusUpdater } from "./status-updater"
 import { MarkPaidButton } from "@/components/admin/mark-paid-button"
 
+export const dynamic = "force-dynamic"
+
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500",
   confirmed: "bg-blue-500/10 text-blue-500",

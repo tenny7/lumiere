@@ -4,6 +4,10 @@ import Link from "next/link"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/utils/constants"
 import { ArrowLeft, MapPin, Check, Truck, ExternalLink } from "lucide-react"
+import { OrderAutoRefresh } from "@/components/storefront/order-auto-refresh"
+
+// Always reflect the latest status/tracking (no stale cache).
+export const dynamic = "force-dynamic"
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-400 border-amber-500/20",
@@ -79,6 +83,7 @@ export default async function OrderDetailPage({
   return (
     <div className="pt-24 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <OrderAutoRefresh status={order.status} />
         <Link
           href="/account/orders"
           className="inline-flex items-center gap-2 text-sm text-[#8a8478] hover:text-[#f5f0e8] transition-colors mb-6"
