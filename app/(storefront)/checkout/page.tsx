@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { formatCurrency } from "@/lib/utils/format"
 import { MOMO_PROVIDERS } from "@/lib/utils/constants"
-import { Loader2, CheckCircle2, XCircle, Phone, MapPin } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 type Step = "shipping" | "payment" | "confirmation"
@@ -32,6 +32,36 @@ export default function CheckoutPage() {
   const [line1, setLine1] = useState("")
   const [city, setCity] = useState("")
   const [region, setRegion] = useState("")
+
+  // Address book
+  type SavedAddress = {
+    id: string
+    label: string | null
+    line_1: string
+    line_2: string | null
+    city: string
+    region: string | null
+    is_default: boolean
+  }
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
+  const [addressMode, setAddressMode] = useState<"saved" | "new">("new")
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("")
+
+  function chooseAddress(addr: SavedAddress) {
+    setAddressMode("saved")
+    setSelectedAddressId(addr.id)
+    setLine1(addr.line_1)
+    setCity(addr.city)
+    setRegion(addr.region || "")
+  }
+
+  function useNewAddress() {
+    setAddressMode("new")
+    setSelectedAddressId("")
+    setLine1("")
+    setCity("")
+    setRegion("")
+  }
 
   // Coupon
   const [couponInput, setCouponInput] = useState("")
@@ -72,6 +102,18 @@ export default function CheckoutPage() {
           setPhone(profile.phone)
           setMomoPhone(profile.phone)
         }
+      }
+
+      // Saved addresses — default to the user's default address, like Amazon.
+      const { data: addrs } = await supabase
+        .from("addresses")
+        .select("id, label, line_1, line_2, city, region, is_default")
+        .eq("profile_id", user.id)
+        .order("is_default", { ascending: false })
+      if (addrs && addrs.length > 0) {
+        setSavedAddresses(addrs)
+        const def = addrs.find((a) => a.is_default) || addrs[0]
+        chooseAddress(def)
       }
 
       const { data } = await supabase
@@ -315,44 +357,106 @@ export default function CheckoutPage() {
                   className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
-              <div>
-                <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
-                  Address
-                </label>
-                <input
-                  type="text"
-                  value={line1}
-                  onChange={(e) => setLine1(e.target.value)}
-                  placeholder="Street address"
-                  required
-                  className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              {/* Saved address book — choose one or add a new address */}
+              {savedAddresses.length > 0 && (
                 <div>
                   <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
-                    City
+                    Deliver To
                   </label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
-                  />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {savedAddresses.map((addr) => {
+                      const active =
+                        addressMode === "saved" && selectedAddressId === addr.id
+                      return (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          onClick={() => chooseAddress(addr)}
+                          className={`text-left p-4 border transition-colors ${
+                            active
+                              ? "border-amber-500 bg-amber-500/[0.06]"
+                              : "border-[#242320] hover:border-amber-500/40"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[0.6rem] font-medium tracking-wider uppercase text-amber-400">
+                              {addr.label || "Address"}
+                            </span>
+                            {addr.is_default && (
+                              <span className="text-[0.55rem] tracking-wider uppercase text-[#8a8478]">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm">
+                            {addr.line_1}
+                            {addr.line_2 ? `, ${addr.line_2}` : ""}
+                          </p>
+                          <p className="text-xs text-[#8a8478]">
+                            {addr.city}
+                            {addr.region ? `, ${addr.region}` : ""}
+                          </p>
+                        </button>
+                      )
+                    })}
+                    <button
+                      type="button"
+                      onClick={useNewAddress}
+                      className={`flex items-center gap-2 p-4 border border-dashed transition-colors ${
+                        addressMode === "new"
+                          ? "border-amber-500 text-amber-400"
+                          : "border-[#242320] text-[#8a8478] hover:border-amber-500/40"
+                      }`}
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span className="text-sm">Use a new address</span>
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
-                    Region
-                  </label>
-                  <input
-                    type="text"
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
-                  />
-                </div>
-              </div>
+              )}
+
+              {(addressMode === "new" || savedAddresses.length === 0) && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      value={line1}
+                      onChange={(e) => setLine1(e.target.value)}
+                      placeholder="Street address"
+                      required
+                      className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                        Region
+                      </label>
+                      <input
+                        type="text"
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Order summary */}
               <div className="mt-8 bg-[#1a1918] border border-white/[0.03] p-5">
