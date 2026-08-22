@@ -149,6 +149,9 @@ export default async function AdminDashboard() {
   const momoCollectedToday = (momoPayments || [])
     .filter((p) => p.completed_at && p.completed_at >= todayISO)
     .reduce((sum, p) => sum + Number(p.amount), 0)
+  // MTN Collections fee is 2.36% (VAT inclusive), so ~97.64% actually settles.
+  const MOMO_FEE_RATE = 0.0236
+  const momoCollectedNet = momoCollectedTotal * (1 - MOMO_FEE_RATE)
 
   const stats = [
     {
@@ -235,6 +238,9 @@ export default async function AdminDashboard() {
               <p className="text-xs text-muted-foreground">
                 {momoPaymentsCount} successful Mobile Money payment
                 {momoPaymentsCount === 1 ? "" : "s"}
+              </p>
+              <p className="mt-0.5 text-xs text-emerald-600">
+                ≈ {formatCurrency(momoCollectedNet)} net (after 2.36% MoMo fee)
               </p>
             </div>
           </div>
