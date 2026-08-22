@@ -5,14 +5,24 @@ import { createClient } from "@/lib/supabase/server"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { formatCurrency } from "@/lib/utils/format"
 
-const categories = [
-  { name: "Chandeliers", slug: "chandeliers", count: 124, accent: "from-amber-900/20 to-transparent" },
-  { name: "Pendant Lights", slug: "pendant-lights", count: 156, accent: "from-rose-900/20 to-transparent" },
-  { name: "Table Lamps", slug: "table-lamps", count: 89, accent: "from-sky-900/20 to-transparent" },
-  { name: "Smart Lights", slug: "smart-lights", count: 98, accent: "from-violet-900/20 to-transparent" },
-  { name: "Outdoor Lighting", slug: "outdoor-lighting", count: 73, accent: "from-emerald-900/20 to-transparent" },
-  { name: "LED Strips", slug: "led-strips", count: 67, accent: "from-orange-900/20 to-transparent" },
+// Fallback gradient accents for category cards that don't have a photo yet
+// (cycled by index so the grid stays visually varied).
+const CATEGORY_ACCENTS = [
+  "from-amber-900/20 to-transparent",
+  "from-rose-900/20 to-transparent",
+  "from-sky-900/20 to-transparent",
+  "from-violet-900/20 to-transparent",
+  "from-emerald-900/20 to-transparent",
+  "from-orange-900/20 to-transparent",
 ]
+
+type ShopCategory = {
+  id: string
+  name: string
+  slug: string
+  image_url: string | null
+  count: number
+}
 
 const services = [
   { icon: Shield, title: "5-Year Warranty", desc: "Every fixture protected against defects" },
@@ -58,6 +68,34 @@ export default async function HomePage() {
   }
 
   const featured = (featuredProducts || []) as unknown as FeaturedProduct[]
+
+  // "Shop by Category" — real categories from the DB (with their image_url),
+  // showing only those that have active products, top 6 by sort order.
+  const { data: dbCategories } = await supabase
+    .from("categories")
+    .select("id, name, slug, image_url, sort_order")
+    .eq("is_active", true)
+    .order("sort_order")
+  const { data: activeProducts } = await supabase
+    .from("products")
+    .select("category_id")
+    .eq("is_active", true)
+  const categoryCounts = new Map<string, number>()
+  for (const p of activeProducts || []) {
+    if (p.category_id) {
+      categoryCounts.set(p.category_id, (categoryCounts.get(p.category_id) || 0) + 1)
+    }
+  }
+  const shopCategories: ShopCategory[] = (dbCategories || [])
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      image_url: c.image_url,
+      count: categoryCounts.get(c.id) || 0,
+    }))
+    .filter((c) => c.count > 0)
+    .slice(0, 6)
 
   return (
     <>
@@ -149,21 +187,36 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map((cat) => (
+          {shopCategories.map((cat, i) => (
             <Link
               key={cat.slug}
               href={`/categories/${cat.slug}`}
               className="group relative h-52 lg:h-64 bg-[#1a1918] border border-white/[0.03] overflow-hidden"
             >
-              <div
-                className={`absolute inset-0 bg-gradient-radial ${cat.accent} opacity-60 group-hover:opacity-100 transition-opacity duration-500`}
-              />
+              {cat.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={cat.image_url}
+                  alt={cat.name}
+                  className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                />
+              ) : (
+                // Branded fallback until a photo is set in Admin → Categories.
+                <>
+                  <div
+                    className={`absolute inset-0 bg-gradient-radial ${CATEGORY_ACCENTS[i % CATEGORY_ACCENTS.length]} opacity-60 group-hover:opacity-100 transition-opacity duration-500`}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Lightbulb className="w-9 h-9 text-white/10" strokeWidth={1} />
+                  </div>
+                </>
+              )}
               <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[#0a0a08]/90 to-transparent">
                 <h3 className="font-serif text-lg font-normal mb-0.5">
                   {cat.name}
                 </h3>
                 <span className="text-[0.68rem] tracking-[0.15em] text-[#8a8478] uppercase">
-                  {cat.count} pieces
+                  {cat.count} {cat.count === 1 ? "piece" : "pieces"}
                 </span>
               </div>
               <div className="absolute top-4 right-4 w-9 h-9 border border-white/10 rounded-full flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
