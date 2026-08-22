@@ -10,6 +10,7 @@ import {
 } from "@/lib/utils/order-display"
 import { ArrowLeft, MapPin, Check, Truck, ExternalLink } from "lucide-react"
 import { OrderAutoRefresh } from "@/components/storefront/order-auto-refresh"
+import { SupportThread, type SupportMessage } from "@/components/support/support-thread"
 
 // Always reflect the latest status/tracking (no stale cache).
 export const dynamic = "force-dynamic"
@@ -81,6 +82,13 @@ export default async function OrderDetailPage({
     .maybeSingle()
 
   const cod = isCodOrder(payment)
+
+  const { data: supportMessages } = await supabase
+    .from("support_messages")
+    .select("id, sender_role, body, read_at, created_at")
+    .eq("order_id", id)
+    .order("created_at", { ascending: true })
+
   const address = (order.shipping_address || {}) as ShippingAddress
   const currency: string = order.currency || "RWF"
 
@@ -350,6 +358,22 @@ export default async function OrderDetailPage({
             </div>
           </div>
         )}
+
+        {/* Messages / Support */}
+        <div className="mb-8">
+          <h2 className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-4">
+            Messages
+          </h2>
+          <SupportThread
+            orderId={order.id}
+            role="customer"
+            initialMessages={(supportMessages as SupportMessage[]) || []}
+          />
+          <p className="mt-2 text-xs text-[#8a8478]">
+            Questions about this order? Message us here — we&apos;ll reply and
+            email you.
+          </p>
+        </div>
 
         <Link
           href="/account/orders"

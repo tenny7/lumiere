@@ -18,6 +18,8 @@ import {
 import { ArrowLeft, User, MapPin, CreditCard, FileText } from "lucide-react"
 import { OrderStatusUpdater } from "./status-updater"
 import { MarkPaidButton } from "@/components/admin/mark-paid-button"
+import { SupportThread, type SupportMessage } from "@/components/support/support-thread"
+import { MessageSquare } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -58,7 +60,21 @@ export default async function OrderDetailPage({
 
   if (!order) notFound()
 
-  const payment = order.payments?.[0]
+  const { data: supportMessages } = await supabase
+    .from("support_messages")
+    .select("id, sender_role, body, read_at, created_at")
+    .eq("order_id", id)
+    .order("created_at", { ascending: true })
+
+  // A customer may have several attempts (e.g. a failed retry then a success).
+  // Show the successful one if any, otherwise the most recent attempt.
+  const paymentAttempts = [...(order.payments || [])].sort(
+    (a, b) =>
+      new Date(b.initiated_at).getTime() - new Date(a.initiated_at).getTime(),
+  )
+  const payment =
+    paymentAttempts.find((p) => p.status === "successful") ||
+    paymentAttempts[0]
   const address = order.shipping_address as {
     line_1?: string
     line_2?: string
@@ -68,9 +84,24 @@ export default async function OrderDetailPage({
     postal_code?: string
   } | null
 
-  const isCodPayment =
-    (payment?.provider_metadata as { method?: string } | null)?.method ===
-    COD_METHOD_VALUE
+  // The raw MoMo response is stored on the payment as provider_metadata. Surface
+  // the useful bits so support can explain a complaint and, when it's MTN's
+  // side, tell the customer what to quote to MoMo.
+  const meta = (payment?.provider_metadata || {}) as {
+    method?: string
+    financialTransactionId?: string
+    reason?: string | { code?: string; message?: string }
+    status?: string
+    manual?: boolean
+  }
+  const isCodPayment = meta.method === COD_METHOD_VALUE
+  const financialTxnId = meta.financialTransactionId
+  const failureReason =
+    typeof meta.reason === "string"
+      ? meta.reason
+      : meta.reason?.message || meta.reason?.code || undefined
+  const hasMomoResponse =
+    Boolean(payment?.provider_metadata) && !meta.manual && !isCodPayment
   const providerLabel = isCodPayment
     ? "Cash on Delivery"
     : (MOMO_PROVIDERS.find((p) => p.value === payment?.provider)?.label ??
@@ -296,10 +327,70 @@ export default async function OrderDetailPage({
                       </p>
                     </div>
                   )}
+                  {financialTxnId && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">
+                        MoMo Transaction ID
+                      </p>
+                      <p className="font-medium font-mono text-xs break-all">
+                        {financialTxnId}
+                      </p>
+                    </div>
+                  )}
+                  {failureReason && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">MoMo Reason</p>
+                      <p className="font-medium font-mono text-xs text-red-500">
+                        {failureReason}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Support note — what to tell the customer on a complaint. */}
+                {payment.status === "failed" && (
+                  <div className="mt-4 rounded-md border border-red-500/20 bg-red-500/5 p-3 text-xs text-muted-foreground">
+                    This payment failed on MTN&apos;s side
+                    {failureReason ? ` (${failureReason})` : ""}. No money was
+                    collected. Ask the customer to retry, or — if they were
+                    charged — to contact MTN MoMo quoting the reference
+                    {financialTxnId ? ` / transaction ID above` : " above"}.
+                  </div>
+                )}
+
+                {/* Full raw MoMo response, for support / disputes. */}
+                {hasMomoResponse && (
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      MoMo raw response
+                    </summary>
+                    <pre className="mt-2 overflow-x-auto rounded-md bg-muted p-3 text-[0.7rem] leading-relaxed">
+                      {JSON.stringify(payment.provider_metadata, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </CardContent>
             </Card>
           )}
+
+          {/* Support — message the customer about this order */}
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+              <CardTitle className="text-base">Support</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Messages here reach the customer&apos;s inbox and email. Use it to
+                explain a payment issue or update them on their order.
+              </p>
+              <SupportThread
+                orderId={order.id}
+                role="admin"
+                initialMessages={(supportMessages as SupportMessage[]) || []}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right column */}

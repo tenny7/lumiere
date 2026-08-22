@@ -3,9 +3,10 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search, User, ShoppingCart, Menu, X, Shield, Heart, HelpCircle } from "lucide-react"
+import { Search, User, ShoppingCart, Menu, X, Shield, Heart, HelpCircle, MessageSquare } from "lucide-react"
 import { useCartCount } from "@/hooks/use-cart-count"
 import { useWishlistCount } from "@/hooks/use-wishlist-count"
+import { useUnreadMessages } from "@/hooks/use-unread-messages"
 import { createClient } from "@/lib/supabase/client"
 import { TOUR_EVENT } from "@/components/storefront/welcome-tour"
 
@@ -26,6 +27,7 @@ export function Navbar() {
   const [isStaff, setIsStaff] = useState(false)
   const cartCount = useCartCount()
   const wishlistCount = useWishlistCount()
+  const unreadMessages = useUnreadMessages()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40)
@@ -143,6 +145,19 @@ export function Navbar() {
               )}
             </Link>
             <Link
+              href="/account/messages"
+              aria-label="Messages"
+              title="Messages"
+              className="text-muted-foreground hover:text-warm-white transition-colors relative hidden sm:block"
+            >
+              <MessageSquare className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1.5 -right-2 w-4 h-4 bg-amber text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
+                  {unreadMessages > 99 ? "99+" : unreadMessages}
+                </span>
+              )}
+            </Link>
+            <Link
               href="/account"
               aria-label="My account"
               title="My account"
@@ -227,6 +242,14 @@ export function Navbar() {
               >
                 <ShoppingCart className="w-4 h-4" strokeWidth={1.5} />
                 Cart{cartCount > 0 ? ` (${cartCount})` : ""}
+              </Link>
+              <Link
+                href="/account/messages"
+                className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
+                Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
               </Link>
               <Link
                 href="/account"
