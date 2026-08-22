@@ -115,6 +115,68 @@ export function DonutChart({
   )
 }
 
+function compactAmount(v: number): string {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+  if (v >= 1_000) return `${Math.round(v / 1_000)}k`
+  return String(Math.round(v))
+}
+
+/**
+ * Dependency-free HTML/CSS vertical bar chart for a daily time series. One
+ * column per day (including zero-sales days), amount labels when sparse. Uses
+ * flexbox so it's naturally responsive with crisp (non-distorted) text.
+ */
+export function BarChart({
+  points,
+  height = 180,
+}: {
+  points: { label: string; value: number }[]
+  height?: number
+}) {
+  if (points.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        No revenue data yet
+      </p>
+    )
+  }
+
+  const max = Math.max(...points.map((p) => p.value), 1)
+  const nonZero = points.filter((p) => p.value > 0).length
+  const showLabels = nonZero > 0 && nonZero <= 10
+
+  return (
+    <div className="w-full">
+      <div className="flex items-end gap-1.5" style={{ height }}>
+        {points.map((p, i) => {
+          const pct = p.value > 0 ? Math.max((p.value / max) * 100, 3) : 0
+          return (
+            <div
+              key={i}
+              className="group flex h-full flex-1 flex-col items-center justify-end"
+              title={`${formatDate(p.label)} · ${formatCurrency(p.value)}`}
+            >
+              {showLabels && p.value > 0 && (
+                <span className="mb-1 text-[0.65rem] font-semibold tabular-nums">
+                  {compactAmount(p.value)}
+                </span>
+              )}
+              <div
+                className="w-full max-w-[34px] rounded-t bg-gradient-to-t from-amber-500/40 to-amber-500 transition-opacity group-hover:opacity-90"
+                style={{ height: `${pct}%` }}
+              />
+            </div>
+          )
+        })}
+      </div>
+      <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+        <span>{formatDate(points[0].label)}</span>
+        <span>{formatDate(points[points.length - 1].label)}</span>
+      </div>
+    </div>
+  )
+}
+
 /**
  * Dependency-free SVG area chart for a time series. Server-renderable.
  */

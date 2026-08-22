@@ -16,7 +16,7 @@ import {
   Users,
   TrendingUp,
 } from "lucide-react"
-import { DonutChart, AreaChart, type DonutDatum } from "@/components/admin/charts"
+import { DonutChart, BarChart, type DonutDatum } from "@/components/admin/charts"
 
 const STATUS_HEX: Record<string, string> = {
   pending: "#eab308",
@@ -53,9 +53,13 @@ export default async function AdminAnalyticsPage() {
     totalRevenue += order.total
   })
 
-  const revenueDays = Object.entries(revenueByDate)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-14) // Show last 14 days for readability
+  // Continuous last-14-days series (one entry per day, 0 for days with no sales).
+  const daySeries: { label: string; value: number }[] = []
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+    const key = d.toISOString().split("T")[0]
+    daySeries.push({ label: key, value: revenueByDate[key] ?? 0 })
+  }
 
   // Top selling products
   const { data: topProducts } = await supabase
@@ -151,10 +155,6 @@ export default async function AdminAnalyticsPage() {
         : 0
 
   // Chart data
-  const revenuePoints = revenueDays.map(([date, amount]) => ({
-    label: date,
-    value: amount,
-  }))
   const statusDonut: DonutDatum[] = Object.entries(statusCounts)
     .sort(([, a], [, b]) => b - a)
     .map(([status, count]) => ({
@@ -251,7 +251,7 @@ export default async function AdminAnalyticsPage() {
             <CardTitle className="text-base">Daily Revenue (Last 14 Days)</CardTitle>
           </CardHeader>
           <CardContent>
-            <AreaChart points={revenuePoints} />
+            <BarChart points={daySeries} />
           </CardContent>
         </Card>
 
