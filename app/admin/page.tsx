@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants"
+import { ORDER_STATUS_LABELS, MOMO_PROVIDERS } from "@/lib/utils/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { GettingStarted, type OnboardingStep } from "@/components/admin/getting-started"
@@ -13,6 +13,7 @@ import {
   Clock,
   TrendingUp,
   ArrowUpRight,
+  Wallet,
 } from "lucide-react"
 
 // Always render on request so "today" reflects the actual current day and the
@@ -58,6 +59,7 @@ export default async function AdminDashboard() {
     { count: productCount },
     { count: featuredCount },
     { data: storePhoneRow },
+    { data: momoPayments },
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -92,6 +94,16 @@ export default async function AdminDashboard() {
       .select("value")
       .eq("key", "store_phone")
       .maybeSingle(),
+    // Successful MoMo collections (recorded from our own payments — no MoMo API
+    // dependency). Excludes Cash on Delivery and manual entries.
+    supabase
+      .from("payments")
+      .select("amount, completed_at")
+      .eq("status", "successful")
+      .in(
+        "provider",
+        MOMO_PROVIDERS.map((p) => p.value),
+      ),
   ])
 
   const storePhone =
@@ -127,6 +139,16 @@ export default async function AdminDashboard() {
     .filter((o) => o.status !== "cancelled" && o.status !== "refunded")
     .reduce((sum, o) => sum + Number(o.total), 0)
   const ordersToday = todayOrders?.length ?? 0
+
+  // MoMo collections recorded from our own successful payments.
+  const momoCollectedTotal = (momoPayments || []).reduce(
+    (sum, p) => sum + Number(p.amount),
+    0,
+  )
+  const momoPaymentsCount = momoPayments?.length ?? 0
+  const momoCollectedToday = (momoPayments || [])
+    .filter((p) => p.completed_at && p.completed_at >= todayISO)
+    .reduce((sum, p) => sum + Number(p.amount), 0)
 
   const stats = [
     {
@@ -190,6 +212,45 @@ export default async function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* MoMo collections — recorded from our own successful payments (no MoMo
+          API dependency). This is the reconciliation figure for money collected
+          via Mobile Money; it is not the live MoMo wallet balance. */}
+      <Card
+        className="dash-rise"
+        style={{ "--i": 5 } as React.CSSProperties}
+      >
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+              <Wallet className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                MoMo Collected (recorded)
+              </p>
+              <p className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
+                {formatCurrency(momoCollectedTotal)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {momoPaymentsCount} successful Mobile Money payment
+                {momoPaymentsCount === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+          <div className="sm:text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Collected today
+            </p>
+            <p className="mt-0.5 text-lg font-semibold tracking-tight tabular-nums">
+              {formatCurrency(momoCollectedToday)}
+            </p>
+            <p className="text-[0.7rem] text-muted-foreground">
+              From confirmed payments — not the live MoMo wallet balance.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Orders */}

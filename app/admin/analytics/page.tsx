@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants"
+import { ORDER_STATUS_LABELS, MOMO_PROVIDERS, COD_METHOD_VALUE } from "@/lib/utils/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -98,6 +98,36 @@ export default async function AdminAnalyticsPage() {
     statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1
   })
   const totalOrders = allOrders?.length ?? 0
+
+  // Collections by payment method (from our own successful payments).
+  const { data: successfulPayments } = await supabase
+    .from("payments")
+    .select("amount, provider, provider_metadata")
+    .eq("status", "successful")
+
+  const momoValues = MOMO_PROVIDERS.map((p) => p.value) as string[]
+  const collections = {
+    momo: { label: "MTN Mobile Money", total: 0, count: 0 },
+    cod: { label: "Cash on Delivery", total: 0, count: 0 },
+    other: { label: "Other / Manual", total: 0, count: 0 },
+  }
+  ;(successfulPayments ?? []).forEach((p) => {
+    const amt = Number(p.amount)
+    const method = (p.provider_metadata as { method?: string } | null)?.method
+    if (momoValues.includes(p.provider)) {
+      collections.momo.total += amt
+      collections.momo.count += 1
+    } else if (method === COD_METHOD_VALUE) {
+      collections.cod.total += amt
+      collections.cod.count += 1
+    } else {
+      collections.other.total += amt
+      collections.other.count += 1
+    }
+  })
+  const collectionsTotal =
+    collections.momo.total + collections.cod.total + collections.other.total
+  const collectionRows = [collections.momo, collections.cod, collections.other]
 
   // New customers this month vs last month
   const { count: customersThisMonth } = await supabase
@@ -278,6 +308,47 @@ export default async function AdminAnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Collections by Method */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Collections by Method</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Recorded from successful payments — total {formatCurrency(collectionsTotal)}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {collectionsTotal > 0 ? (
+            <div className="space-y-3">
+              {collectionRows.map((row) => (
+                <div key={row.label} className="flex items-center justify-between">
+                  <span className="text-sm">{row.label}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-10 text-right">
+                      {row.count}
+                    </span>
+                    <div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500/60 rounded-full"
+                        style={{
+                          width: `${collectionsTotal > 0 ? (row.total / collectionsTotal) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium w-24 text-right">
+                      {formatCurrency(row.total)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No collections yet
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Top Selling Products */}
       <Card>

@@ -13,37 +13,78 @@ export type SupportMessage = {
 }
 
 /**
- * Two-way per-order support thread, shared by the admin order page (role="admin")
- * and the customer order page (role="customer"). Own messages align right.
- * Marks the other party's messages read on mount and polls for new ones.
+ * Full-page two-way support chat for one order, shared by the admin
+ * (role="admin") and customer (role="customer") chat pages. Loads the latest
+ * page, supports "load earlier" pagination, polls for new messages, and marks
+ * the other party's messages read on open.
  */
 export function SupportThread({
   orderId,
   role,
   initialMessages,
+  initialHasMore = false,
 }: {
   orderId: string
   role: "admin" | "customer"
   initialMessages: SupportMessage[]
+  initialHasMore?: boolean
 }) {
   const isAdminSurface = role === "admin"
   const [messages, setMessages] = useState<SupportMessage[]>(initialMessages)
+  const [hasMore, setHasMore] = useState(initialHasMore)
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
+  const [loadingEarlier, setLoadingEarlier] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
 
-  async function refresh() {
+  function mergeAppend(incoming: SupportMessage[]) {
+    if (incoming.length === 0) return
+    setMessages((cur) => {
+      const seen = new Set(cur.map((m) => m.id))
+      const fresh = incoming.filter((m) => !seen.has(m.id))
+      return fresh.length ? [...cur, ...fresh] : cur
+    })
+  }
+
+  // Poll for new messages after the latest one we have.
+  async function pollNew() {
+    const last = messages[messages.length - 1]?.created_at
+    if (!last) return
     try {
-      const res = await fetch(`/api/support/messages?orderId=${orderId}`)
+      const res = await fetch(
+        `/api/support/messages?orderId=${orderId}&after=${encodeURIComponent(last)}`,
+      )
       if (!res.ok) return
       const data = await res.json()
-      if (Array.isArray(data.messages)) setMessages(data.messages)
+      mergeAppend(data.messages || [])
     } catch {
       /* ignore transient errors */
     }
   }
 
-  // Mark the other party's messages read, then keep the thread fresh.
+  async function loadEarlier() {
+    const first = messages[0]?.created_at
+    if (!first || loadingEarlier) return
+    setLoadingEarlier(true)
+    try {
+      const res = await fetch(
+        `/api/support/messages?orderId=${orderId}&before=${encodeURIComponent(first)}`,
+      )
+      if (res.ok) {
+        const data = await res.json()
+        const older: SupportMessage[] = data.messages || []
+        setMessages((cur) => {
+          const seen = new Set(cur.map((m) => m.id))
+          return [...older.filter((m) => !seen.has(m.id)), ...cur]
+        })
+        setHasMore(Boolean(data.hasMore))
+      }
+    } finally {
+      setLoadingEarlier(false)
+    }
+  }
+
+  // Mark the other party's messages read, then poll.
   useEffect(() => {
     fetch("/api/support/read", {
       method: "POST",
@@ -52,10 +93,10 @@ export function SupportThread({
     })
       .then(() => notifyMessagesUpdated())
       .catch(() => {})
-    const t = setInterval(refresh, 20000)
+    const t = setInterval(pollNew, 15000)
     return () => clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId])
+  }, [orderId, messages.length])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "nearest" })
@@ -73,7 +114,7 @@ export function SupportThread({
       })
       const data = await res.json()
       if (res.ok && data.message) {
-        setMessages((m) => [...m, data.message])
+        mergeAppend([data.message])
         setInput("")
       }
     } finally {
@@ -88,19 +129,14 @@ export function SupportThread({
     }
   }
 
-  // Surface-specific styling (admin uses design tokens; storefront uses the dark palette).
   const shell = isAdminSurface
-    ? "rounded-lg border bg-card"
-    : "border border-white/[0.06] bg-[#111010]"
-  const listBg = isAdminSurface ? "" : ""
-  const emptyText = isAdminSurface ? "text-muted-foreground" : "text-[#8a8478]"
-  const ownBubble = isAdminSurface
-    ? "bg-amber-500 text-black"
-    : "bg-amber-500 text-black"
+    ? "flex flex-col h-[70vh] rounded-lg border bg-card"
+    : "flex flex-col h-[70vh] border border-white/[0.06] bg-[#111010]"
+  const muted = isAdminSurface ? "text-muted-foreground" : "text-[#8a8478]"
+  const ownBubble = "bg-amber-500 text-black"
   const otherBubble = isAdminSurface
     ? "bg-muted text-foreground"
     : "bg-[#1f1e1c] text-[#f5f0e8]"
-  const meta = isAdminSurface ? "text-muted-foreground" : "text-[#8a8478]"
   const inputCls = isAdminSurface
     ? "flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-amber-500"
     : "flex-1 resize-none bg-[#1a1918] border border-[#242320] px-3 py-2 text-sm text-[#f5f0e8] outline-none focus:border-amber-500"
@@ -110,12 +146,23 @@ export function SupportThread({
 
   return (
     <div className={shell}>
-      <div className={`max-h-80 overflow-y-auto p-4 space-y-3 ${listBg}`}>
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+        {hasMore && (
+          <div className="text-center">
+            <button
+              onClick={loadEarlier}
+              disabled={loadingEarlier}
+              className={`text-xs ${muted} hover:underline disabled:opacity-50`}
+            >
+              {loadingEarlier ? "Loading…" : "Load earlier messages"}
+            </button>
+          </div>
+        )}
         {messages.length === 0 ? (
-          <p className={`text-sm ${emptyText} py-6 text-center`}>
+          <p className={`text-sm ${muted} py-6 text-center`}>
             {isAdminSurface
               ? "No messages yet. Send the customer an update below."
-              : "No messages yet."}
+              : "No messages yet. Send us a message about this order below."}
           </p>
         ) : (
           messages.map((m) => {
@@ -132,7 +179,7 @@ export function SupportThread({
                 >
                   {m.body}
                 </div>
-                <span className={`mt-1 text-[0.6rem] ${meta}`}>
+                <span className={`mt-1 text-[0.6rem] ${muted}`}>
                   {m.sender_role === "admin" ? "Ajabu Lighting" : "Customer"} ·{" "}
                   {formatDateTime(m.created_at)}
                 </span>

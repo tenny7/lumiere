@@ -13,7 +13,9 @@ import {
   Settings,
   Activity,
   Lightbulb,
+  MessageSquare,
 } from "lucide-react"
+import { useAdminUnreadMessages } from "@/hooks/use-unread-messages"
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +33,7 @@ import {
 const mainNav = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
+  { title: "Support", href: "/admin/support", icon: MessageSquare },
   { title: "Products", href: "/admin/products", icon: Package },
   { title: "Categories", href: "/admin/categories", icon: FolderTree },
   { title: "Customers", href: "/admin/customers", icon: Users },
@@ -48,6 +51,7 @@ const settingsNav = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const supportUnread = useAdminUnreadMessages()
 
   return (
     <Sidebar>
@@ -86,6 +90,11 @@ export function AdminSidebar() {
                   >
                     <item.icon className="w-4 h-4" />
                     <span>{item.title}</span>
+                    {item.href === "/admin/support" && supportUnread > 0 && (
+                      <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[0.6rem] font-semibold text-black">
+                        {supportUnread > 99 ? "99+" : supportUnread}
+                      </span>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

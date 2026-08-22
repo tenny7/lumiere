@@ -8,9 +8,8 @@ import {
   orderStatusLabel,
   orderStatusColorKey,
 } from "@/lib/utils/order-display"
-import { ArrowLeft, MapPin, Check, Truck, ExternalLink } from "lucide-react"
+import { ArrowLeft, MapPin, Check, Truck, ExternalLink, MessageSquare } from "lucide-react"
 import { OrderAutoRefresh } from "@/components/storefront/order-auto-refresh"
-import { SupportThread, type SupportMessage } from "@/components/support/support-thread"
 
 // Always reflect the latest status/tracking (no stale cache).
 export const dynamic = "force-dynamic"
@@ -83,11 +82,17 @@ export default async function OrderDetailPage({
 
   const cod = isCodOrder(payment)
 
-  const { data: supportMessages } = await supabase
+  const { count: messageCount } = await supabase
     .from("support_messages")
-    .select("id, sender_role, body, read_at, created_at")
+    .select("id", { count: "exact", head: true })
     .eq("order_id", id)
-    .order("created_at", { ascending: true })
+  const { count: unreadFromStore } = await supabase
+    .from("support_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("order_id", id)
+    .eq("sender_role", "admin")
+    .neq("sender_id", user.id)
+    .is("read_at", null)
 
   const address = (order.shipping_address || {}) as ShippingAddress
   const currency: string = order.currency || "RWF"
@@ -359,20 +364,39 @@ export default async function OrderDetailPage({
           </div>
         )}
 
-        {/* Messages / Support */}
+        {/* Messages / Support — dedicated chat page for this order */}
         <div className="mb-8">
           <h2 className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-4">
             Messages
           </h2>
-          <SupportThread
-            orderId={order.id}
-            role="customer"
-            initialMessages={(supportMessages as SupportMessage[]) || []}
-          />
-          <p className="mt-2 text-xs text-[#8a8478]">
-            Questions about this order? Message us here — we&apos;ll reply and
-            email you.
-          </p>
+          <Link
+            href={`/account/messages/${order.id}`}
+            className="group flex items-center justify-between border border-white/[0.06] p-5 hover:border-amber-500/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <MessageSquare className="w-5 h-5 text-[#8a8478]" strokeWidth={1.5} />
+              <div>
+                <p className="text-sm">
+                  {messageCount && messageCount > 0
+                    ? "Open conversation"
+                    : "Message us about this order"}
+                </p>
+                <p className="text-xs text-[#8a8478]">
+                  {messageCount && messageCount > 0
+                    ? `${messageCount} message${messageCount === 1 ? "" : "s"}`
+                    : "We'll reply here and email you"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {unreadFromStore && unreadFromStore > 0 ? (
+                <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-black text-[0.6rem] font-semibold px-2 py-0.5">
+                  {unreadFromStore} new
+                </span>
+              ) : null}
+              <ExternalLink className="w-4 h-4 text-[#8a8478] group-hover:text-amber-400 transition-colors" />
+            </div>
+          </Link>
         </div>
 
         <Link

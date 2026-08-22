@@ -18,8 +18,7 @@ import {
 import { ArrowLeft, User, MapPin, CreditCard, FileText } from "lucide-react"
 import { OrderStatusUpdater } from "./status-updater"
 import { MarkPaidButton } from "@/components/admin/mark-paid-button"
-import { SupportThread, type SupportMessage } from "@/components/support/support-thread"
-import { MessageSquare } from "lucide-react"
+import { MessageSquare, ArrowUpRight } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -60,11 +59,16 @@ export default async function OrderDetailPage({
 
   if (!order) notFound()
 
-  const { data: supportMessages } = await supabase
+  const { count: messageCount } = await supabase
     .from("support_messages")
-    .select("id, sender_role, body, read_at, created_at")
+    .select("id", { count: "exact", head: true })
     .eq("order_id", id)
-    .order("created_at", { ascending: true })
+  const { count: unreadFromCustomer } = await supabase
+    .from("support_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("order_id", id)
+    .eq("sender_role", "customer")
+    .is("read_at", null)
 
   // A customer may have several attempts (e.g. a failed retry then a success).
   // Show the successful one if any, otherwise the most recent attempt.
@@ -373,22 +377,34 @@ export default async function OrderDetailPage({
             </Card>
           )}
 
-          {/* Support — message the customer about this order */}
+          {/* Support — opens the dedicated chat for this order */}
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
               <CardTitle className="text-base">Support</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-3 text-xs text-muted-foreground">
-                Messages here reach the customer&apos;s inbox and email. Use it to
-                explain a payment issue or update them on their order.
-              </p>
-              <SupportThread
-                orderId={order.id}
-                role="admin"
-                initialMessages={(supportMessages as SupportMessage[]) || []}
-              />
+              <Link
+                href={`/admin/support/${order.id}`}
+                className="flex items-center justify-between rounded-md border p-4 hover:border-amber-500/40 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-medium">Open support chat</p>
+                  <p className="text-xs text-muted-foreground">
+                    {messageCount && messageCount > 0
+                      ? `${messageCount} message${messageCount === 1 ? "" : "s"} — reaches the customer's inbox and email`
+                      : "Message the customer — reaches their inbox and email"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {unreadFromCustomer && unreadFromCustomer > 0 ? (
+                    <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-black text-[0.6rem] font-semibold px-2 py-0.5">
+                      {unreadFromCustomer} new
+                    </span>
+                  ) : null}
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </Link>
             </CardContent>
           </Card>
         </div>

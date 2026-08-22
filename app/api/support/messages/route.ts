@@ -25,7 +25,12 @@ async function resolveAccess(userId: string, orderId: string) {
   return { adminDb, order, isAdmin, isOwner }
 }
 
-// GET /api/support/messages?orderId=... — the thread for one order.
+const PAGE_SIZE = 30
+
+// GET /api/support/messages?orderId=...[&before=ISO][&after=ISO]
+//   - no cursor: the latest PAGE_SIZE messages (ascending) + hasMore (older exist)
+//   - before=ISO: the page of older messages before that time (for "load earlier")
+//   - after=ISO:  messages newer than that time (for polling), ascending
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const {
@@ -35,7 +40,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const orderId = request.nextUrl.searchParams.get("orderId")
+  const params = request.nextUrl.searchParams
+  const orderId = params.get("orderId")
+  const before = params.get("before")
+  const after = params.get("after")
   if (!orderId) {
     return NextResponse.json({ error: "Missing orderId" }, { status: 400 })
   }
@@ -49,13 +57,33 @@ export async function GET(request: NextRequest) {
   }
 
   const adminDb = createAdminClient()
-  const { data: messages } = await adminDb
-    .from("support_messages")
-    .select("id, sender_role, body, read_at, created_at")
-    .eq("order_id", orderId)
-    .order("created_at", { ascending: true })
+  const cols = "id, sender_role, body, read_at, created_at"
 
-  return NextResponse.json({ messages: messages || [] })
+  if (after) {
+    // New messages since a timestamp — for polling. Ascending, no cap needed.
+    const { data } = await adminDb
+      .from("support_messages")
+      .select(cols)
+      .eq("order_id", orderId)
+      .gt("created_at", after)
+      .order("created_at", { ascending: true })
+    return NextResponse.json({ messages: data || [], hasMore: false })
+  }
+
+  // Latest page (optionally before a cursor). Fetch newest-first, then reverse.
+  let q = adminDb
+    .from("support_messages")
+    .select(cols)
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false })
+    .limit(PAGE_SIZE + 1)
+  if (before) q = q.lt("created_at", before)
+  const { data } = await q
+  const rows = data || []
+  const hasMore = rows.length > PAGE_SIZE
+  const page = hasMore ? rows.slice(0, PAGE_SIZE) : rows
+  page.reverse() // ascending for display
+  return NextResponse.json({ messages: page, hasMore })
 }
 
 // POST /api/support/messages — send a message on an order's thread.

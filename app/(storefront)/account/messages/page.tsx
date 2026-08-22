@@ -75,7 +75,7 @@ export default async function MessagesPage() {
             {threads.map((t) => (
               <Link
                 key={t.orderId}
-                href={`/account/orders/${t.orderId}`}
+                href={`/account/messages/${t.orderId}`}
                 className="group flex items-center justify-between border border-white/[0.06] p-5 hover:border-amber-500/30 transition-colors gap-4"
               >
                 <div className="flex-1 min-w-0">
