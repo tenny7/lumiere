@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { MOMO_PROVIDERS } from "@/lib/utils/constants"
+import { PAYMENT_METHODS } from "@/lib/utils/constants"
 import { SettingsNav } from "@/components/admin/settings-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { Save } from "lucide-react"
 import { toast } from "sonner"
 
-const ALL_PROVIDER_VALUES = MOMO_PROVIDERS.map((p) => p.value)
+const ALL_PROVIDER_VALUES = PAYMENT_METHODS.map((p) => p.value)
 
 function parseProviders(value: unknown): string[] | null {
   if (Array.isArray(value)) return value as string[]
@@ -147,14 +147,14 @@ export default function PaymentSettingsPage() {
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-base">Mobile Money Providers</CardTitle>
+          <CardTitle className="text-base">Payment Methods</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-sm text-muted-foreground mb-3">
             Turn payment methods on or off. Only the active ones appear to
             customers at checkout.
           </p>
-          {MOMO_PROVIDERS.map((p) => (
+          {PAYMENT_METHODS.map((p) => (
             <div
               key={p.value}
               className="flex items-center justify-between py-2.5 border-b last:border-0"

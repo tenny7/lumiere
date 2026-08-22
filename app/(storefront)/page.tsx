@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Truck, Shield, RotateCcw, Headphones } from "lucide-react"
+import { ArrowRight, Truck, Shield, RotateCcw, Headphones, Lightbulb } from "lucide-react"
 import { NewsletterForm } from "@/components/storefront/newsletter-form"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreCurrency } from "@/lib/utils/settings"
@@ -213,7 +213,15 @@ export default async function HomePage() {
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
-                  ) : null}
+                  ) : (
+                    // Default placeholder when a featured product has no image.
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-radial from-amber-500/10 to-transparent">
+                      <Lightbulb
+                        className="w-10 h-10 text-amber-500/40"
+                        strokeWidth={1.25}
+                      />
+                    </div>
+                  )}
                   {product.sale_price && (
                     <span className="absolute top-3 left-3 z-20 px-2.5 py-1 text-[0.55rem] tracking-[0.2em] uppercase font-medium bg-rose-500 text-white">
                       Sale

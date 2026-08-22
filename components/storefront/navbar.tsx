@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search, User, ShoppingBag, Menu, X, LayoutDashboard, Heart, HelpCircle } from "lucide-react"
+import { Search, User, ShoppingCart, Menu, X, Shield, Heart, HelpCircle } from "lucide-react"
 import { useCartCount } from "@/hooks/use-cart-count"
 import { useWishlistCount } from "@/hooks/use-wishlist-count"
 import { createClient } from "@/lib/supabase/client"
@@ -103,6 +103,7 @@ export function Navbar() {
             <button
               onClick={() => setSearchOpen((o) => !o)}
               aria-label="Search"
+              title="Search"
               className="text-muted-foreground hover:text-warm-white transition-colors"
             >
               <Search className="w-[18px] h-[18px]" strokeWidth={1.5} />
@@ -122,12 +123,13 @@ export function Navbar() {
                 title="Admin dashboard"
                 className="text-amber hover:text-amber-300 transition-colors"
               >
-                <LayoutDashboard className="w-[18px] h-[18px]" strokeWidth={1.5} />
+                <Shield className="w-[18px] h-[18px]" strokeWidth={1.5} />
               </Link>
             )}
             <Link
               href="/account/wishlist"
               aria-label="Wishlist"
+              title="Wishlist"
               className="text-muted-foreground hover:text-warm-white transition-colors relative"
             >
               <Heart
@@ -142,15 +144,19 @@ export function Navbar() {
             </Link>
             <Link
               href="/account"
+              aria-label="My account"
+              title="My account"
               className="text-muted-foreground hover:text-warm-white transition-colors hidden sm:block"
             >
               <User className="w-[18px] h-[18px]" strokeWidth={1.5} />
             </Link>
             <Link
               href="/cart"
+              aria-label="Cart"
+              title="Cart"
               className="text-muted-foreground hover:text-warm-white transition-colors relative"
             >
-              <ShoppingBag className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              <ShoppingCart className="w-[18px] h-[18px]" strokeWidth={1.5} />
               {cartCount > 0 && (
                 <span className="absolute -top-1.5 -right-2 w-4 h-4 bg-amber text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
                   {cartCount > 99 ? "99+" : cartCount}
@@ -202,29 +208,52 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/account"
-              className="block text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors pt-4 border-t border-white/5"
-              onClick={() => setMobileOpen(false)}
-            >
-              My Account
-            </Link>
-            <button
-              onClick={openTour}
-              className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
-            >
-              <HelpCircle className="w-4 h-4" strokeWidth={1.5} />
-              Take a quick tour
-            </button>
-            {isStaff && (
+            <div className="pt-4 border-t border-white/5 space-y-4">
               <Link
-                href="/admin"
-                className="block text-sm font-medium tracking-wider text-amber hover:text-amber-300 transition-colors"
+                href="/account/wishlist"
+                className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
                 onClick={() => setMobileOpen(false)}
               >
-                Admin Dashboard
+                <Heart
+                  className={`w-4 h-4 ${wishlistCount > 0 ? "fill-amber text-amber" : ""}`}
+                  strokeWidth={1.5}
+                />
+                Wishlist{wishlistCount > 0 ? ` (${wishlistCount})` : ""}
               </Link>
-            )}
+              <Link
+                href="/cart"
+                className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                <ShoppingCart className="w-4 h-4" strokeWidth={1.5} />
+                Cart{cartCount > 0 ? ` (${cartCount})` : ""}
+              </Link>
+              <Link
+                href="/account"
+                className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+                onClick={() => setMobileOpen(false)}
+              >
+                <User className="w-4 h-4" strokeWidth={1.5} />
+                My Account
+              </Link>
+              <button
+                onClick={openTour}
+                className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+              >
+                <HelpCircle className="w-4 h-4" strokeWidth={1.5} />
+                Take a quick tour
+              </button>
+              {isStaff && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2 text-sm font-medium tracking-wider text-amber hover:text-amber-300 transition-colors"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Shield className="w-4 h-4" strokeWidth={1.5} />
+                  Admin Dashboard
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}

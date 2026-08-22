@@ -2,7 +2,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDateTime, formatPhone } from "@/lib/utils/format"
-import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, MOMO_PROVIDERS } from "@/lib/utils/constants"
+import { PAYMENT_STATUS_LABELS, MOMO_PROVIDERS, COD_METHOD_VALUE } from "@/lib/utils/constants"
+import { orderStatusLabel, orderStatusColorKey } from "@/lib/utils/order-display"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +23,7 @@ export const dynamic = "force-dynamic"
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500",
+  cod_pending: "bg-green-500/10 text-green-500",
   confirmed: "bg-blue-500/10 text-blue-500",
   processing: "bg-purple-500/10 text-purple-500",
   shipped: "bg-cyan-500/10 text-cyan-500",
@@ -66,10 +68,14 @@ export default async function OrderDetailPage({
     postal_code?: string
   } | null
 
-  const providerLabel =
-    MOMO_PROVIDERS.find((p) => p.value === payment?.provider)?.label ??
-    payment?.provider ??
-    "N/A"
+  const isCodPayment =
+    (payment?.provider_metadata as { method?: string } | null)?.method ===
+    COD_METHOD_VALUE
+  const providerLabel = isCodPayment
+    ? "Cash on Delivery"
+    : (MOMO_PROVIDERS.find((p) => p.value === payment?.provider)?.label ??
+      payment?.provider ??
+      "N/A")
 
   // Admin can update from any non-terminal state (incl. pending, so orders can
   // be advanced manually while MoMo isn't fully wired up).
@@ -128,9 +134,9 @@ export default async function OrderDetailPage({
           </Button>
           <Badge
             variant="secondary"
-            className={`text-[0.6rem] ${statusColors[order.status]}`}
+            className={`text-[0.6rem] ${statusColors[orderStatusColorKey(order.status, isCodPayment)]}`}
           >
-            {ORDER_STATUS_LABELS[order.status]}
+            {orderStatusLabel(order.status, isCodPayment)}
           </Badge>
           {payment && (
             <Badge

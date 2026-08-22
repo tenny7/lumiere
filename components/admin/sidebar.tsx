@@ -11,9 +11,6 @@ import {
   Ticket,
   BarChart3,
   Settings,
-  Contact,
-  Handshake,
-  ListTodo,
   Activity,
   Lightbulb,
 } from "lucide-react"
@@ -42,9 +39,6 @@ const mainNav = [
 ]
 
 const crmNav = [
-  { title: "Contacts", href: "/admin/crm/contacts", icon: Contact },
-  { title: "Deals", href: "/admin/crm/deals", icon: Handshake },
-  { title: "Tasks", href: "/admin/crm/tasks", icon: ListTodo },
   { title: "Activity", href: "/admin/crm/activity", icon: Activity },
 ]
 

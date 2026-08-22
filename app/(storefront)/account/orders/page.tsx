@@ -2,13 +2,18 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants"
+import {
+  isCodOrder,
+  orderStatusLabel,
+  orderStatusColorKey,
+} from "@/lib/utils/order-display"
 import { ArrowLeft, ArrowRight, Package } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+  cod_pending: "bg-green-500/15 text-green-400 border-green-500/20",
   confirmed: "bg-blue-500/15 text-blue-400 border-blue-500/20",
   processing: "bg-blue-500/15 text-blue-400 border-blue-500/20",
   shipped: "bg-purple-500/15 text-purple-400 border-purple-500/20",
@@ -27,7 +32,7 @@ export default async function OrdersPage() {
 
   const { data: orders } = await supabase
     .from("orders")
-    .select("*, items:order_items(id)")
+    .select("*, items:order_items(id), payments(provider_metadata)")
     .eq("customer_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -51,7 +56,9 @@ export default async function OrdersPage() {
 
         {orders && orders.length > 0 ? (
           <div className="space-y-3">
-            {orders.map((order) => (
+            {orders.map((order) => {
+              const cod = isCodOrder(order.payments)
+              return (
               <Link
                 key={order.id}
                 href={`/account/orders/${order.id}`}
@@ -63,9 +70,9 @@ export default async function OrdersPage() {
                       {order.order_number}
                     </span>
                     <span
-                      className={`inline-flex px-2 py-0.5 text-[0.6rem] font-medium tracking-[0.1em] uppercase border ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}
+                      className={`inline-flex px-2 py-0.5 text-[0.6rem] font-medium tracking-[0.1em] uppercase border ${STATUS_COLORS[orderStatusColorKey(order.status, cod)] || STATUS_COLORS.pending}`}
                     >
-                      {ORDER_STATUS_LABELS[order.status] || order.status}
+                      {orderStatusLabel(order.status, cod)}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-[#8a8478]">
@@ -84,7 +91,8 @@ export default async function OrdersPage() {
                   <ArrowRight className="w-4 h-4 text-[#8a8478] group-hover:text-amber-400 transition-colors" />
                 </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="text-center py-20 border border-white/[0.06]">

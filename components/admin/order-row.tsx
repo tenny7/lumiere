@@ -4,10 +4,16 @@ import { useRouter } from "next/navigation"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/utils/constants"
+import { PAYMENT_STATUS_LABELS } from "@/lib/utils/constants"
+import {
+  isCodOrder,
+  orderStatusLabel,
+  orderStatusColorKey,
+} from "@/lib/utils/order-display"
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500",
+  cod_pending: "bg-green-500/10 text-green-500",
   confirmed: "bg-blue-500/10 text-blue-500",
   processing: "bg-purple-500/10 text-purple-500",
   shipped: "bg-cyan-500/10 text-cyan-500",
@@ -32,12 +38,13 @@ type Order = {
   status: string
   created_at: string
   customer?: { full_name: string; email: string } | null
-  payments?: { status: string; provider: string }[]
+  payments?: { status: string; provider: string; provider_metadata?: unknown }[]
 }
 
 export function OrderRow({ order }: { order: Order }) {
   const router = useRouter()
   const payment = order.payments?.[0]
+  const cod = isCodOrder(order.payments)
   const href = `/admin/orders/${order.id}`
 
   return (
@@ -64,9 +71,9 @@ export function OrderRow({ order }: { order: Order }) {
       <TableCell>
         <Badge
           variant="secondary"
-          className={`text-[0.6rem] ${statusColors[order.status]}`}
+          className={`text-[0.6rem] ${statusColors[orderStatusColorKey(order.status, cod)]}`}
         >
-          {ORDER_STATUS_LABELS[order.status]}
+          {orderStatusLabel(order.status, cod)}
         </Badge>
       </TableCell>
       <TableCell>

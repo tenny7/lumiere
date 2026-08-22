@@ -3,6 +3,11 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/utils/constants"
+import {
+  isCodOrder,
+  orderStatusLabel,
+  orderStatusColorKey,
+} from "@/lib/utils/order-display"
 import { ArrowLeft, MapPin, Check, Truck, ExternalLink } from "lucide-react"
 import { OrderAutoRefresh } from "@/components/storefront/order-auto-refresh"
 
@@ -11,6 +16,7 @@ export const dynamic = "force-dynamic"
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+  cod_pending: "bg-green-500/15 text-green-400 border-green-500/20",
   confirmed: "bg-blue-500/15 text-blue-400 border-blue-500/20",
   processing: "bg-blue-500/15 text-blue-400 border-blue-500/20",
   shipped: "bg-purple-500/15 text-purple-400 border-purple-500/20",
@@ -68,12 +74,13 @@ export default async function OrderDetailPage({
   // Latest payment status (orders don't store payment status directly)
   const { data: payment } = await supabase
     .from("payments")
-    .select("status")
+    .select("status, provider_metadata")
     .eq("order_id", id)
     .order("initiated_at", { ascending: false })
     .limit(1)
     .maybeSingle()
 
+  const cod = isCodOrder(payment)
   const address = (order.shipping_address || {}) as ShippingAddress
   const currency: string = order.currency || "RWF"
 
@@ -105,9 +112,9 @@ export default async function OrderDetailPage({
               {formatDate(order.created_at)}
             </span>
             <span
-              className={`inline-flex px-2 py-0.5 text-[0.6rem] font-medium tracking-[0.1em] uppercase border ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}
+              className={`inline-flex px-2 py-0.5 text-[0.6rem] font-medium tracking-[0.1em] uppercase border ${STATUS_COLORS[orderStatusColorKey(order.status, cod)] || STATUS_COLORS.pending}`}
             >
-              {ORDER_STATUS_LABELS[order.status] || order.status}
+              {orderStatusLabel(order.status, cod)}
             </span>
             {payment?.status && (
               <span
@@ -142,6 +149,12 @@ export default async function OrderDetailPage({
               className={`border p-5 text-sm ${STATUS_COLORS[order.status]}`}
             >
               This order was {ORDER_STATUS_LABELS[order.status]?.toLowerCase()}.
+            </div>
+          ) : order.status === "pending" && cod ? (
+            <div className="border border-green-500/20 bg-green-500/[0.06] p-5 text-sm text-green-300/90">
+              Order placed — you&apos;ll pay with cash when it&apos;s delivered.
+              We&apos;ll be in touch to arrange delivery, and your tracking updates
+              here once it&apos;s on the way.
             </div>
           ) : order.status === "pending" ? (
             <div className="border border-amber-500/20 bg-amber-500/[0.06] p-5 text-sm text-amber-300/90">

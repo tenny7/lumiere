@@ -60,6 +60,10 @@ export function ProductForm({ product }: { product?: Product }) {
   const [longDescription, setLongDescription] = useState(product?.long_description || "")
   const [categoryId, setCategoryId] = useState(product?.category_id || "")
   const [sku, setSku] = useState(product?.sku || "")
+  // Track whether the admin has hand-edited the SKU. If they have (or the
+  // product already has one), we never auto-overwrite it.
+  const [skuTouched, setSkuTouched] = useState(!!product?.sku)
+  const [skuGenerating, setSkuGenerating] = useState(false)
   const [basePrice, setBasePrice] = useState(product?.base_price?.toString() || "")
   const [salePrice, setSalePrice] = useState(product?.sale_price?.toString() || "")
   const [costPrice, setCostPrice] = useState(product?.cost_price?.toString() || "")
@@ -88,6 +92,47 @@ export function ProductForm({ product }: { product?: Product }) {
     // Auto-generate the slug from the name while creating a new product.
     if (!product) setSlug(slugify(value))
   }
+
+  // Build the SKU prefix from the category (or, failing that, the product name):
+  // LUM-<up to 4 letters>. e.g. category "Chandeliers" -> "LUM-CHAN".
+  function skuPrefix(): string {
+    const categoryName = categories.find((c) => c.id === categoryId)?.name
+    const letters = (s: string, n: number) =>
+      s.replace(/[^a-zA-Z]/g, "").slice(0, n).toUpperCase()
+    const code = letters(categoryName || name, 4) || "GEN"
+    return `LUM-${code}`
+  }
+
+  // Generate a unique SKU of the form LUM-<CAT>-<NNN>, where NNN is the next
+  // free number for that prefix (the sku column is UNIQUE, so we look at what
+  // already exists rather than guessing).
+  async function generateSku() {
+    setSkuGenerating(true)
+    try {
+      const prefix = skuPrefix()
+      const { data } = await supabase
+        .from("products")
+        .select("sku")
+        .ilike("sku", `${prefix}-%`)
+      let max = 0
+      const seqRe = new RegExp(`^${prefix}-(\\d+)$`)
+      for (const row of data || []) {
+        const m = row.sku?.match(seqRe)
+        if (m) max = Math.max(max, parseInt(m[1], 10))
+      }
+      const next = String(max + 1).padStart(3, "0")
+      setSku(`${prefix}-${next}`)
+    } finally {
+      setSkuGenerating(false)
+    }
+  }
+
+  // Auto-fill the SKU once a category is chosen, unless the admin has taken it
+  // over (or the product already has one).
+  useEffect(() => {
+    if (skuTouched || !categoryId) return
+    generateSku()
+  }, [categoryId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -279,13 +324,30 @@ export function ProductForm({ product }: { product?: Product }) {
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="sku">SKU</Label>
-                <Input
-                  id="sku"
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  placeholder="LUM-CHAN-001"
-                />
+                <Label htmlFor="sku" className="flex items-center gap-1.5">
+                  SKU
+                  <InfoTip text="Stock-keeping unit. Auto-generated from the category as LUM-<CAT>-<NNN> when you pick a category — you can edit it or click Generate to get the next free number." />
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="sku"
+                    value={sku}
+                    onChange={(e) => {
+                      setSku(e.target.value)
+                      setSkuTouched(true)
+                    }}
+                    placeholder="LUM-CHAN-001"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={generateSku}
+                    disabled={skuGenerating}
+                    className="shrink-0"
+                  >
+                    {skuGenerating ? "..." : "Generate"}
+                  </Button>
+                </div>
               </div>
               <div>
                 <Label htmlFor="stock">Stock Quantity</Label>

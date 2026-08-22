@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useSyncExternalStore } from "react"
 import Link from "next/link"
 import { Check, X, ArrowRight, Rocket } from "lucide-react"
 
@@ -15,6 +15,38 @@ export type OnboardingStep = {
 
 const STORAGE_KEY = "ajabu_admin_onboarding_dismissed"
 
+// The dismissed flag lives in localStorage (an external store), so we read it
+// with useSyncExternalStore rather than a setState-in-effect. The server (and
+// first hydration) snapshot is "hidden", so the card never flashes for stores
+// that already dismissed it; the real value is read on the client after mount.
+const dismissListeners = new Set<() => void>()
+
+function subscribeDismissed(callback: () => void) {
+  dismissListeners.add(callback)
+  window.addEventListener("storage", callback)
+  return () => {
+    dismissListeners.delete(callback)
+    window.removeEventListener("storage", callback)
+  }
+}
+
+function readDismissed() {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+
+function dismissOnboarding() {
+  try {
+    localStorage.setItem(STORAGE_KEY, "1")
+  } catch {
+    /* ignore unavailable storage */
+  }
+  dismissListeners.forEach((l) => l())
+}
+
 /**
  * First-run checklist for a new store. Auto-hides once every step is complete
  * or the admin dismisses it. Rendered client-side so it can be dismissed and
@@ -27,11 +59,11 @@ export function GettingStarted({
   steps: OnboardingStep[]
   className?: string
 }) {
-  const [hidden, setHidden] = useState(true)
-
-  useEffect(() => {
-    setHidden(localStorage.getItem(STORAGE_KEY) === "1")
-  }, [])
+  const hidden = useSyncExternalStore(
+    subscribeDismissed,
+    readDismissed, // client: real localStorage value
+    () => true, // server / first hydration: hidden, so it never flashes
+  )
 
   const doneCount = steps.filter((s) => s.done).length
   if (hidden || doneCount === steps.length) return null
@@ -55,10 +87,7 @@ export function GettingStarted({
           </div>
         </div>
         <button
-          onClick={() => {
-            localStorage.setItem(STORAGE_KEY, "1")
-            setHidden(true)
-          }}
+          onClick={dismissOnboarding}
           aria-label="Dismiss getting started"
           className="text-muted-foreground hover:text-foreground transition-colors"
         >

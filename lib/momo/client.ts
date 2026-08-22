@@ -20,6 +20,19 @@ const CALLBACK_URL = process.env.MOMO_CALLBACK_URL!
 // "sandbox" or "production" (with real creds) to use the live API.
 const MOCK = ENVIRONMENT === "mock" || process.env.MOMO_MOCK === "true"
 
+// A callback URL is only usable if it's a real, publicly reachable host. MTN
+// also validates it against the API user's provisioned host, so we skip it on
+// localhost (dev/sandbox) and let status polling drive the flow.
+function isPublicCallbackUrl(url: string | undefined): boolean {
+  if (!url) return false
+  try {
+    const host = new URL(url).hostname
+    return host !== "" && host !== "localhost" && host !== "127.0.0.1"
+  } catch {
+    return false
+  }
+}
+
 let cachedToken: { token: string; expiresAt: number } | null = null
 
 async function getAccessToken(): Promise<string> {
@@ -67,7 +80,9 @@ export async function requestToPay(params: {
 
   const body: MomoRequestToPayBody = {
     amount: params.amount.toString(),
-    currency: params.currency,
+    // The MTN sandbox only accepts EUR for requesttopay, so force it there.
+    // Production (real go-live) uses the order's real currency (RWF).
+    currency: ENVIRONMENT === "sandbox" ? "EUR" : params.currency,
     externalId: params.externalId,
     payer: {
       partyIdType: "MSISDN",
@@ -77,16 +92,25 @@ export async function requestToPay(params: {
     payeeNote: params.payeeNote || `Order ${params.externalId}`,
   }
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "X-Reference-Id": referenceId,
+    "X-Target-Environment": ENVIRONMENT,
+    "Ocp-Apim-Subscription-Key": PRIMARY_KEY,
+    "Content-Type": "application/json",
+  }
+  // Only send the async callback in production. The sandbox never resolves a
+  // payment (it stays PENDING) so it never fires a callback, and MTN rejects the
+  // request unless the callback host matches the API user's provisioned host —
+  // so in sandbox we skip it and rely on status polling. In production the URL
+  // must be a real public host whose domain matches the provisioned API user.
+  if (ENVIRONMENT === "production" && isPublicCallbackUrl(CALLBACK_URL)) {
+    headers["X-Callback-Url"] = CALLBACK_URL
+  }
+
   const res = await fetch(`${API_URL}/v1_0/requesttopay`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "X-Reference-Id": referenceId,
-      "X-Target-Environment": ENVIRONMENT,
-      "Ocp-Apim-Subscription-Key": PRIMARY_KEY,
-      "X-Callback-Url": CALLBACK_URL,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30000),
   })

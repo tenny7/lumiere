@@ -6,8 +6,8 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { formatCurrency } from "@/lib/utils/format"
-import { MOMO_PROVIDERS } from "@/lib/utils/constants"
-import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus } from "lucide-react"
+import { MOMO_PROVIDERS, COD_METHOD, COD_METHOD_VALUE } from "@/lib/utils/constants"
+import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus, Banknote } from "lucide-react"
 import { toast } from "sonner"
 
 type Step = "shipping" | "payment" | "confirmation"
@@ -77,6 +77,8 @@ export default function CheckoutPage() {
     (typeof MOMO_PROVIDERS)[number][]
   >([...MOMO_PROVIDERS])
   const [provider, setProvider] = useState<string>("momo_mtn")
+  const [codEnabled, setCodEnabled] = useState(true)
+  const isCod = provider === COD_METHOD_VALUE
   const [momoPhone, setMomoPhone] = useState("")
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "polling" | "success" | "failed">("idle")
   const [orderId, setOrderId] = useState("")
@@ -128,19 +130,24 @@ export default function CheckoutPage() {
         router.push("/cart")
       }
 
-      // Only show the payment methods the admin has enabled.
+      // Only show the payment methods the admin has enabled. With no explicit
+      // setting, everything (MoMo providers + Cash on Delivery) is available.
       const { data: apRow } = await supabase
         .from("store_settings")
         .select("value")
         .eq("key", "active_payment_providers")
         .maybeSingle()
       const active = Array.isArray(apRow?.value) ? (apRow.value as string[]) : null
-      if (active && active.length > 0) {
-        const filtered = MOMO_PROVIDERS.filter((p) => active.includes(p.value))
-        if (filtered.length > 0) {
-          setAvailableProviders(filtered)
-          setProvider(filtered[0].value)
-        }
+      const codOn = !active || active.includes(COD_METHOD_VALUE)
+      setCodEnabled(codOn)
+      const filteredMomo = active
+        ? MOMO_PROVIDERS.filter((p) => active.includes(p.value))
+        : [...MOMO_PROVIDERS]
+      setAvailableProviders(filteredMomo)
+      if (filteredMomo.length > 0) {
+        setProvider(filteredMomo[0].value)
+      } else if (codOn) {
+        setProvider(COD_METHOD_VALUE)
       }
     }
     loadCart()
@@ -286,6 +293,37 @@ export default function CheckoutPage() {
           // Continue polling on network errors
         }
       }, 5000)
+    } catch {
+      toast.error("Network error. Please try again.")
+      setPaymentStatus("failed")
+    }
+  }
+
+  async function handleCod() {
+    setPaymentStatus("pending")
+    try {
+      const res = await fetch("/api/payments/cod", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || "Failed to place order")
+        setPaymentStatus("failed")
+        return
+      }
+
+      // Clear the cart, matching the MoMo success path.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from("cart_items").delete().eq("profile_id", user.id)
+      }
+      notifyCartUpdated()
+      setPaymentStatus("success")
+      setStep("confirmation")
     } catch {
       toast.error("Network error. Please try again.")
       setPaymentStatus("failed")
@@ -552,19 +590,17 @@ export default function CheckoutPage() {
         {/* ═══ STEP 2: PAYMENT ═══ */}
         {step === "payment" && (
           <div>
-            <h1 className="font-serif text-2xl font-light mb-2">
-              Mobile Money Payment
-            </h1>
+            <h1 className="font-serif text-2xl font-light mb-2">Payment</h1>
             <p className="text-sm text-[#8a8478] mb-8">
               Order {orderNumber} — {formatCurrency(total)}
             </p>
 
             {paymentStatus === "idle" || paymentStatus === "failed" ? (
               <div className="space-y-6">
-                {/* Provider Selection */}
+                {/* Payment Method Selection */}
                 <div>
                   <p className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-3">
-                    Select Provider
+                    Select Payment Method
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     {availableProviders.map((p) => (
@@ -586,26 +622,46 @@ export default function CheckoutPage() {
                         </span>
                       </button>
                     ))}
+                    {codEnabled && (
+                      <button
+                        onClick={() => setProvider(COD_METHOD_VALUE)}
+                        className={`p-4 border text-center transition-colors ${
+                          isCod
+                            ? "border-amber-500 bg-amber-500/5"
+                            : "border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <Banknote
+                          className="w-4 h-4 mx-auto mb-1.5"
+                          style={{ color: COD_METHOD.color }}
+                        />
+                        <span className="text-[0.65rem] leading-tight block">
+                          {COD_METHOD.label}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Phone Number */}
-                <div>
-                  <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
-                    MoMo Phone Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8a8478]" />
-                    <input
-                      type="tel"
-                      value={momoPhone}
-                      onChange={(e) => setMomoPhone(e.target.value)}
-                      placeholder="+250 781 234 567 (with country code)"
-                      required
-                      className="w-full pl-10 pr-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
-                    />
+                {/* Phone Number (MoMo only) */}
+                {!isCod && (
+                  <div>
+                    <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                      MoMo Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8a8478]" />
+                      <input
+                        type="tel"
+                        value={momoPhone}
+                        onChange={(e) => setMomoPhone(e.target.value)}
+                        placeholder="+250 781 234 567 (with country code)"
+                        required
+                        className="w-full pl-10 pr-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {paymentStatus === "failed" && (
                   <div className="p-4 bg-red-500/10 border border-red-500/20 rounded flex items-center gap-3">
@@ -616,16 +672,31 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={handlePayment}
-                  className="w-full py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
-                >
-                  Pay {formatCurrency(total)} with MoMo
-                </button>
-
-                <p className="text-xs text-[#8a8478] text-center">
-                  You will receive a prompt on your phone to confirm payment
-                </p>
+                {isCod ? (
+                  <>
+                    <button
+                      onClick={handleCod}
+                      className="w-full py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
+                    >
+                      Place Order — Pay {formatCurrency(total)} on Delivery
+                    </button>
+                    <p className="text-xs text-[#8a8478] text-center">
+                      No payment now. Pay with cash when your order is delivered.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handlePayment}
+                      className="w-full py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
+                    >
+                      Pay {formatCurrency(total)} with MoMo
+                    </button>
+                    <p className="text-xs text-[#8a8478] text-center">
+                      You will receive a prompt on your phone to confirm payment
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               /* Payment in progress */

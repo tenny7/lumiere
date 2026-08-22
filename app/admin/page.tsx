@@ -15,6 +15,25 @@ import {
   ArrowUpRight,
 } from "lucide-react"
 
+// Always render on request so "today" reflects the actual current day and the
+// figures are never served from a stale cache.
+export const dynamic = "force-dynamic"
+
+// Rwanda (Africa/Kigali) is UTC+3 year-round with no daylight saving. Compute
+// the start of *today in Kigali* as a UTC instant, so the day boundary matches
+// the store's local day regardless of the server's timezone.
+function startOfTodayKigaliISO(): string {
+  const KIGALI_OFFSET_MS = 3 * 60 * 60 * 1000
+  const nowKigali = new Date(Date.now() + KIGALI_OFFSET_MS)
+  const midnightKigaliUTC =
+    Date.UTC(
+      nowKigali.getUTCFullYear(),
+      nowKigali.getUTCMonth(),
+      nowKigali.getUTCDate(),
+    ) - KIGALI_OFFSET_MS
+  return new Date(midnightKigaliUTC).toISOString()
+}
+
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500",
   confirmed: "bg-blue-500/10 text-blue-500",
@@ -28,9 +47,7 @@ const statusColors: Record<string, string> = {
 export default async function AdminDashboard() {
   const supabase = await createClient()
 
-  const startOfToday = new Date()
-  startOfToday.setHours(0, 0, 0, 0)
-  const todayISO = startOfToday.toISOString()
+  const todayISO = startOfTodayKigaliISO()
 
   const [
     { data: todayOrders },
