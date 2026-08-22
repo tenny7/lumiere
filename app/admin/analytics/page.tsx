@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
-import { formatCurrency, formatDate } from "@/lib/utils/format"
+import { formatCurrency } from "@/lib/utils/format"
 import { ORDER_STATUS_LABELS, MOMO_PROVIDERS, COD_METHOD_VALUE } from "@/lib/utils/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -17,15 +16,16 @@ import {
   Users,
   TrendingUp,
 } from "lucide-react"
+import { DonutChart, AreaChart, type DonutDatum } from "@/components/admin/charts"
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-500",
-  confirmed: "bg-blue-500/10 text-blue-500",
-  processing: "bg-purple-500/10 text-purple-500",
-  shipped: "bg-cyan-500/10 text-cyan-500",
-  delivered: "bg-green-500/10 text-green-500",
-  cancelled: "bg-red-500/10 text-red-500",
-  refunded: "bg-gray-500/10 text-gray-500",
+const STATUS_HEX: Record<string, string> = {
+  pending: "#eab308",
+  confirmed: "#3b82f6",
+  processing: "#a855f7",
+  shipped: "#06b6d4",
+  delivered: "#22c55e",
+  cancelled: "#ef4444",
+  refunded: "#6b7280",
 }
 
 export default async function AdminAnalyticsPage() {
@@ -56,8 +56,6 @@ export default async function AdminAnalyticsPage() {
   const revenueDays = Object.entries(revenueByDate)
     .sort(([a], [b]) => a.localeCompare(b))
     .slice(-14) // Show last 14 days for readability
-
-  const maxRevenue = Math.max(...revenueDays.map(([, v]) => v), 1)
 
   // Top selling products
   const { data: topProducts } = await supabase
@@ -152,6 +150,27 @@ export default async function AdminAnalyticsPage() {
         ? 100
         : 0
 
+  // Chart data
+  const revenuePoints = revenueDays.map(([date, amount]) => ({
+    label: date,
+    value: amount,
+  }))
+  const statusDonut: DonutDatum[] = Object.entries(statusCounts)
+    .sort(([, a], [, b]) => b - a)
+    .map(([status, count]) => ({
+      label: ORDER_STATUS_LABELS[status] ?? status,
+      value: count,
+      color: STATUS_HEX[status] ?? "#94a3b8",
+      display: String(count),
+    }))
+  const paymentsCount = successfulPayments?.length ?? 0
+  const collectionsDonut: DonutDatum[] = collectionRows.map((row, i) => ({
+    label: row.label,
+    value: row.total,
+    color: ["#f59e0b", "#22c55e", "#94a3b8"][i],
+    display: formatCurrency(row.total),
+  }))
+
   return (
     <div className="space-y-6">
       <div>
@@ -232,32 +251,7 @@ export default async function AdminAnalyticsPage() {
             <CardTitle className="text-base">Daily Revenue (Last 14 Days)</CardTitle>
           </CardHeader>
           <CardContent>
-            {revenueDays.length > 0 ? (
-              <div className="space-y-2">
-                {revenueDays.map(([date, amount]) => (
-                  <div key={date} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-16 shrink-0">
-                      {formatDate(date)}
-                    </span>
-                    <div className="flex-1 h-5 bg-muted rounded-sm overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500/60 rounded-sm"
-                        style={{
-                          width: `${Math.max((amount / maxRevenue) * 100, 2)}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs font-medium w-20 text-right">
-                      {formatCurrency(amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                No revenue data yet
-              </p>
-            )}
+            <AreaChart points={revenuePoints} />
           </CardContent>
         </Card>
 
@@ -267,39 +261,8 @@ export default async function AdminAnalyticsPage() {
             <CardTitle className="text-base">Orders by Status</CardTitle>
           </CardHeader>
           <CardContent>
-            {Object.keys(statusCounts).length > 0 ? (
-              <div className="space-y-3">
-                {Object.entries(statusCounts)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([status, count]) => (
-                    <div
-                      key={status}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="secondary"
-                          className={`text-[0.6rem] ${statusColors[status] ?? ""}`}
-                        >
-                          {ORDER_STATUS_LABELS[status] ?? status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-foreground/20 rounded-full"
-                            style={{
-                              width: `${totalOrders > 0 ? (count / totalOrders) * 100 : 0}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium w-8 text-right">
-                          {count}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+            {statusDonut.length > 0 ? (
+              <DonutChart data={statusDonut} centerLabel="ORDERS" />
             ) : (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 No orders yet
@@ -319,29 +282,11 @@ export default async function AdminAnalyticsPage() {
         </CardHeader>
         <CardContent>
           {collectionsTotal > 0 ? (
-            <div className="space-y-3">
-              {collectionRows.map((row) => (
-                <div key={row.label} className="flex items-center justify-between">
-                  <span className="text-sm">{row.label}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-10 text-right">
-                      {row.count}
-                    </span>
-                    <div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500/60 rounded-full"
-                        style={{
-                          width: `${collectionsTotal > 0 ? (row.total / collectionsTotal) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium w-24 text-right">
-                      {formatCurrency(row.total)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DonutChart
+              data={collectionsDonut}
+              centerValue={String(paymentsCount)}
+              centerLabel="PAYMENTS"
+            />
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">
               No collections yet
