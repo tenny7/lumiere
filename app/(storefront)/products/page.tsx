@@ -64,6 +64,20 @@ export default async function ProductsPage({
 
   const totalPages = Math.ceil((count || 0) / perPage)
 
+  const sortOptions = [
+    { value: "", label: "Featured" },
+    { value: "newest", label: "Newest" },
+    { value: "price-asc", label: "Price ↑" },
+    { value: "price-desc", label: "Price ↓" },
+  ]
+  // Pill styling for the mobile filter chips.
+  const chip = (active: boolean) =>
+    `whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-colors ${
+      active
+        ? "bg-amber-500 text-black border-amber-500"
+        : "border-white/15 text-[#8a8478] hover:border-amber-500/50 hover:text-[#f5f0e8]"
+    }`
+
   return (
     <div className="pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -85,8 +99,8 @@ export default async function ProductsPage({
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10">
-          {/* Sidebar Filters */}
-          <aside className="lg:w-56 flex-shrink-0">
+          {/* Sidebar Filters — desktop only */}
+          <aside className="hidden lg:block lg:w-56 flex-shrink-0">
             <h3 className="text-[0.65rem] font-medium tracking-[0.2em] uppercase text-[#8a8478] mb-4">
               Categories
             </h3>
@@ -135,6 +149,35 @@ export default async function ProductsPage({
 
           {/* Product Grid */}
           <div className="flex-1">
+            {/* Mobile filters — horizontal scrolling chips */}
+            <div className="lg:hidden mb-6 space-y-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <Link href="/products" className={chip(!params.category)}>
+                  All
+                </Link>
+                {categories?.map((cat) => (
+                  <Link
+                    key={cat.slug}
+                    href={`/products?category=${cat.slug}`}
+                    className={chip(params.category === cat.slug)}
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {sortOptions.map((opt) => (
+                  <Link
+                    key={opt.value}
+                    href={`/products?${new URLSearchParams({ ...params, sort: opt.value, page: "1" }).toString()}`}
+                    className={chip((params.sort || "") === opt.value)}
+                  >
+                    {opt.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             <ShopTip />
             {products && products.length > 0 ? (
               <>

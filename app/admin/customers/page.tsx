@@ -36,7 +36,7 @@ export default async function AdminCustomersPage({
 
   let query = supabase
     .from("profiles")
-    .select("*, orders(count, total)")
+    .select("*, orders(total, status)")
     .order("created_at", { ascending: false })
     .limit(100)
 
@@ -44,19 +44,17 @@ export default async function AdminCustomersPage({
     query = query.eq("role", role)
   }
 
-  const { data: profiles } = await query
+  const { data: profiles, error } = await query
+  if (error) console.error("Customers query error:", error.message)
 
   const customers = (profiles ?? []).map((profile) => {
     const orders = profile.orders as unknown as
-      | { count: number; total: number }[]
+      | { total: number; status: string }[]
       | null
-    const orderCount = orders?.length
-      ? (orders[0] as { count: number }).count
-      : 0
-    const totalSpent = orders?.reduce(
-      (sum: number, o: { total: number }) => sum + (o.total ?? 0),
-      0
-    ) ?? 0
+    const orderCount = orders?.length ?? 0
+    const totalSpent = (orders ?? [])
+      .filter((o) => o.status !== "cancelled" && o.status !== "refunded")
+      .reduce((sum: number, o: { total: number }) => sum + (o.total ?? 0), 0)
     return { ...profile, orderCount, totalSpent }
   })
 
