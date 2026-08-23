@@ -178,6 +178,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Remember this address in the customer's address book so it's prefilled
+    // next time (dedupe by line_1 + city; best-effort — never fail the order).
+    try {
+      const { data: existingAddr } = await adminDb
+        .from("addresses")
+        .select("id")
+        .eq("profile_id", user.id)
+        .ilike("line_1", line1)
+        .ilike("city", city)
+        .maybeSingle()
+      if (!existingAddr) {
+        const { count } = await adminDb
+          .from("addresses")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", user.id)
+        await adminDb.from("addresses").insert({
+          profile_id: user.id,
+          line_1: line1,
+          city,
+          region: region || null,
+          country: "Rwanda",
+          is_default: (count ?? 0) === 0,
+        })
+      }
+    } catch (e) {
+      console.error("Address book save failed:", e)
+    }
+
     // Increment coupon usage (best-effort; order already created)
     if (couponId) {
       await adminDb.rpc("increment_coupon_uses", { p_coupon_id: couponId })
