@@ -21,6 +21,13 @@ export default async function WishlistPage() {
     .eq("profile_id", user.id)
     .order("created_at", { ascending: false })
 
+  // Which wishlist products are already in the cart (for the "In cart" state).
+  const { data: cartRows } = await supabase
+    .from("cart_items")
+    .select("product_id")
+    .eq("profile_id", user.id)
+  const cartProductIds = new Set((cartRows ?? []).map((c) => c.product_id))
+
   return (
     <div className="pt-24 pb-16">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -85,6 +92,7 @@ export default async function WishlistPage() {
                   <WishlistActions
                     wishlistId={item.id}
                     productId={product.id}
+                    initialInCart={cartProductIds.has(product.id)}
                   />
                 </div>
               )

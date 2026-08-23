@@ -6,17 +6,20 @@ import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { notifyWishlistUpdated } from "@/hooks/use-wishlist-count"
 import { toast } from "sonner"
-import { ShoppingBag, X } from "lucide-react"
+import { ShoppingBag, X, Check } from "lucide-react"
 
 export function WishlistActions({
   wishlistId,
   productId,
+  initialInCart = false,
 }: {
   wishlistId: string
   productId: string
+  initialInCart?: boolean
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [inCart, setInCart] = useState(initialInCart)
 
   async function handleRemove() {
     setLoading(true)
@@ -60,6 +63,7 @@ export function WishlistActions({
     if (error) {
       toast.error("Failed to add to cart")
     } else {
+      setInCart(true)
       notifyCartUpdated()
       toast.success("Added to cart", {
         action: { label: "View cart", onClick: () => router.push("/cart") },
@@ -70,14 +74,24 @@ export function WishlistActions({
 
   return (
     <div className="mt-3 flex gap-2">
-      <button
-        onClick={handleAddToCart}
-        disabled={loading}
-        className="flex-1 py-2.5 bg-amber-500 text-black text-[0.7rem] font-medium tracking-[0.15em] uppercase hover:bg-amber-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-      >
-        <ShoppingBag className="w-3.5 h-3.5" />
-        Add to Cart
-      </button>
+      {inCart ? (
+        <button
+          onClick={() => router.push("/cart")}
+          className="flex-1 py-2.5 border border-amber-500/40 text-amber-400 text-[0.7rem] font-medium tracking-[0.15em] uppercase hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <Check className="w-3.5 h-3.5" />
+          In Cart · View
+        </button>
+      ) : (
+        <button
+          onClick={handleAddToCart}
+          disabled={loading}
+          className="flex-1 py-2.5 bg-amber-500 text-black text-[0.7rem] font-medium tracking-[0.15em] uppercase hover:bg-amber-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+        >
+          <ShoppingBag className="w-3.5 h-3.5" />
+          Add to Cart
+        </button>
+      )}
       <button
         onClick={handleRemove}
         disabled={loading}
