@@ -20,8 +20,9 @@ export function useCartCount() {
     async function refresh() {
       const supabase = createClient()
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
+        data: { session },
+      } = await supabase.auth.getSession()
+      const user = session?.user
 
       if (user) {
         const { data } = await supabase
