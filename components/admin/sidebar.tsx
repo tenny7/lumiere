@@ -14,8 +14,10 @@ import {
   Activity,
   Lightbulb,
   MessageSquare,
+  Star,
 } from "lucide-react"
 import { useAdminUnreadMessages } from "@/hooks/use-unread-messages"
+import { usePendingReviews } from "@/hooks/use-pending-reviews"
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +36,7 @@ const mainNav = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { title: "Support", href: "/admin/support", icon: MessageSquare },
+  { title: "Reviews", href: "/admin/reviews", icon: Star },
   { title: "Products", href: "/admin/products", icon: Package },
   { title: "Categories", href: "/admin/categories", icon: FolderTree },
   { title: "Customers", href: "/admin/customers", icon: Users },
@@ -52,6 +55,7 @@ const settingsNav = [
 export function AdminSidebar() {
   const pathname = usePathname()
   const supportUnread = useAdminUnreadMessages()
+  const pendingReviews = usePendingReviews()
 
   return (
     <Sidebar>
@@ -93,6 +97,11 @@ export function AdminSidebar() {
                     {item.href === "/admin/support" && supportUnread > 0 && (
                       <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[0.6rem] font-semibold text-black">
                         {supportUnread > 99 ? "99+" : supportUnread}
+                      </span>
+                    )}
+                    {item.href === "/admin/reviews" && pendingReviews > 0 && (
+                      <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[0.6rem] font-semibold text-black">
+                        {pendingReviews > 99 ? "99+" : pendingReviews}
                       </span>
                     )}
                   </SidebarMenuButton>

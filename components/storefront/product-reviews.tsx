@@ -72,7 +72,7 @@ export function ProductReviews({
     setTitle("")
     setBody("")
     setSubmitting(false)
-    toast.success("Thank you! Your review will appear once approved.")
+    toast.success("Thanks for your review!")
   }
 
   return (
@@ -93,7 +93,7 @@ export function ProductReviews({
 
       {submitted && (
         <p className="text-sm text-amber-400 mb-8">
-          Thank you! Your review is pending approval.
+          Thanks for sharing your thoughts!
         </p>
       )}
 

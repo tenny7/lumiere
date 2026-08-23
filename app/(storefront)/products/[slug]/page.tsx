@@ -54,8 +54,8 @@ export default async function ProductPage({
   const stock = getStockLabel(product.stock_quantity, product.low_stock_threshold)
   const price = product.sale_price || product.base_price
   const avgRating =
-    product.reviews && product.reviews.length > 0
-      ? product.reviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / product.reviews.length
+    approvedReviews.length > 0
+      ? approvedReviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / approvedReviews.length
       : 0
 
   // Specs from metadata
