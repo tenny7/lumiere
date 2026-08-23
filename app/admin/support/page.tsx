@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
-import { formatDateTime } from "@/lib/utils/format"
-import { Card, CardContent } from "@/components/ui/card"
-import { MessageSquare, ArrowUpRight } from "lucide-react"
+import {
+  SupportThreadList,
+  type SupportThreadRow,
+} from "@/components/admin/support-thread-list"
 
 export const dynamic = "force-dynamic"
 
@@ -18,15 +18,6 @@ type Row = {
   } | null
 }
 
-type Thread = {
-  orderId: string
-  orderNumber: string
-  customer: string
-  lastBody: string
-  lastAt: string
-  unread: number
-}
-
 export default async function AdminSupportPage() {
   const supabase = await createClient()
 
@@ -39,7 +30,7 @@ export default async function AdminSupportPage() {
     .order("created_at", { ascending: false })
 
   const rows = (data || []) as unknown as Row[]
-  const byOrder = new Map<string, Thread>()
+  const byOrder = new Map<string, SupportThreadRow>()
   for (const r of rows) {
     let t = byOrder.get(r.order_id)
     if (!t) {
@@ -48,6 +39,7 @@ export default async function AdminSupportPage() {
         orderNumber: r.orders?.order_number || "Order",
         customer:
           r.orders?.customer?.full_name || r.orders?.customer?.email || "—",
+        customerEmail: r.orders?.customer?.email || "",
         lastBody: r.body,
         lastAt: r.created_at,
         unread: 0,
@@ -67,52 +59,7 @@ export default async function AdminSupportPage() {
         </p>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {threads.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <MessageSquare className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                No customer conversations yet.
-              </p>
-            </div>
-          ) : (
-            <ul className="divide-y">
-              {threads.map((t) => (
-                <li key={t.orderId}>
-                  <Link
-                    href={`/admin/support/${t.orderId}`}
-                    className="flex items-center justify-between gap-4 p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-medium">
-                          {t.orderNumber}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {t.customer}
-                        </span>
-                        {t.unread > 0 && (
-                          <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-black text-[0.6rem] font-semibold px-2 py-0.5">
-                            {t.unread} new
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                        {t.lastBody}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        {formatDateTime(t.lastAt)}
-                      </p>
-                    </div>
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <SupportThreadList threads={threads} />
     </div>
   )
 }
