@@ -153,6 +153,12 @@ export default function CheckoutPage() {
     loadCart()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Steps are swapped in-place (not routed), so scroll back to the top when the
+  // step changes — otherwise the payment step opens scrolled to the bottom.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [step])
+
   const subtotal = cartItems.reduce((sum, item) => {
     const price = (item.product.sale_price || item.product.base_price) + (item.variant?.price_adjustment || 0)
     return sum + price * item.quantity
