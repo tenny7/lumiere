@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -30,6 +31,7 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 const mainNav = [
@@ -56,6 +58,12 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const supportUnread = useAdminUnreadMessages()
   const pendingReviews = usePendingReviews()
+  const { setOpenMobile } = useSidebar()
+
+  // Close the mobile sidebar after navigating to a new page.
+  useEffect(() => {
+    setOpenMobile(false)
+  }, [pathname, setOpenMobile])
 
   return (
     <Sidebar>

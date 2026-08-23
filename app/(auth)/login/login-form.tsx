@@ -16,6 +16,7 @@ export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,7 +31,13 @@ export function LoginForm() {
     })
 
     if (authError) {
-      setError("Authentication failed. Please try again.")
+      // Surface the real reason (e.g. "Email not confirmed", "Invalid login
+      // credentials") instead of a generic message.
+      setError(
+        /email not confirmed/i.test(authError.message)
+          ? "Please confirm your email first — check your inbox for the confirmation link."
+          : authError.message || "Authentication failed. Please try again.",
+      )
       setLoading(false)
       return
     }
@@ -59,14 +66,14 @@ export function LoginForm() {
     })
 
     if (authError) {
-      setError("Authentication failed. Please try again.")
+      setError(authError.message || "Could not send the magic link. Please try again.")
       setLoading(false)
       return
     }
 
     setError("")
     setLoading(false)
-    alert("Check your email for the magic link!")
+    setSent(true)
   }
 
   return (
@@ -80,6 +87,11 @@ export function LoginForm() {
         {error && (
           <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded">
             {error}
+          </div>
+        )}
+        {sent && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm rounded">
+            Check your email for the sign-in link.
           </div>
         )}
 

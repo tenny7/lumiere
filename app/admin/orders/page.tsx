@@ -30,7 +30,7 @@ export default async function AdminOrdersPage() {
       </div>
 
       <div className="border rounded-lg">
-        <Table>
+        <Table className="min-w-[720px]">
           <TableHeader>
             <TableRow>
               <TableHead>Order</TableHead>
