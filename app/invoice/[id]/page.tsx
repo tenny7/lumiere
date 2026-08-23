@@ -23,6 +23,18 @@ export default async function InvoicePage({
 
   if (!user) redirect(`/login?redirect=/invoice/${id}`)
 
+  // Route "Back" by role: staff came from the admin order page, customers from
+  // their own order page. (The invoice opens in a new tab, so there's no browser
+  // history to go back to.)
+  const { data: viewerProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+  const isStaff =
+    !!viewerProfile && ["admin", "super_admin"].includes(viewerProfile.role)
+  const backHref = isStaff ? `/admin/orders/${id}` : `/account/orders/${id}`
+
   // RLS lets the order's own customer OR any staff member read it.
   const { data: order } = await supabase
     .from("orders")
@@ -76,7 +88,7 @@ export default async function InvoicePage({
         {/* Actions (hidden when printing) */}
         <div className="print:hidden mb-4 flex items-center justify-between">
           <a
-            href={`/account/orders/${id}`}
+            href={backHref}
             className="text-sm text-neutral-500 hover:text-neutral-900"
           >
             &larr; Back to order
