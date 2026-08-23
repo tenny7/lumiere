@@ -1,8 +1,14 @@
 export function formatCurrency(amount: number, currency = "RWF"): string {
+  // RWF (Rwandan Franc) has no minor unit, so show whole francs; other
+  // currencies keep 2 decimals. Use the ISO code (e.g. "RWF") rather than the
+  // locale symbol ("RF").
+  const zeroDecimal = currency === "RWF"
   return new Intl.NumberFormat("en-RW", {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
+    currencyDisplay: "code",
+    minimumFractionDigits: zeroDecimal ? 0 : 2,
+    maximumFractionDigits: zeroDecimal ? 0 : 2,
   }).format(amount)
 }
 
