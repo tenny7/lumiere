@@ -159,19 +159,21 @@ export function Navbar() {
                 </span>
               )}
             </Link>
-            <Link
-              href="/account/messages"
-              aria-label="Messages"
-              title="Messages"
-              className="text-muted-foreground hover:text-warm-white transition-colors relative hidden sm:block"
-            >
-              <MessageSquare className="w-[18px] h-[18px]" strokeWidth={1.5} />
-              {unreadMessages > 0 && (
-                <span className="absolute -top-1.5 -right-2 w-4 h-4 bg-amber text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
-                  {unreadMessages > 99 ? "99+" : unreadMessages}
-                </span>
-              )}
-            </Link>
+            {signedIn && (
+              <Link
+                href="/account/messages"
+                aria-label="Messages"
+                title="Messages"
+                className="text-muted-foreground hover:text-warm-white transition-colors relative hidden sm:block"
+              >
+                <MessageSquare className="w-[18px] h-[18px]" strokeWidth={1.5} />
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1.5 -right-2 w-4 h-4 bg-amber text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
+                    {unreadMessages > 99 ? "99+" : unreadMessages}
+                  </span>
+                )}
+              </Link>
+            )}
             <Link
               href="/cart"
               aria-label="Cart"
@@ -276,14 +278,16 @@ export function Navbar() {
                 <ShoppingCart className="w-4 h-4" strokeWidth={1.5} />
                 Cart{cartCount > 0 ? ` (${cartCount})` : ""}
               </Link>
-              <Link
-                href="/account/messages"
-                className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
-                onClick={() => setMobileOpen(false)}
-              >
-                <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
-                Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
-              </Link>
+              {signedIn && (
+                <Link
+                  href="/account/messages"
+                  className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
+                  Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+                </Link>
+              )}
               <Link
                 href="/account"
                 className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"

@@ -4,10 +4,13 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Bell, Search, Sun, Moon } from "lucide-react"
+import { Bell, Search, Sun, Moon, Volume2 } from "lucide-react"
 import { useAdminTheme } from "@/components/admin/admin-theme"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
+import { useNotificationSettings } from "@/hooks/use-notification-settings"
+import { playChime } from "@/lib/notification-sound"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +38,7 @@ export function AdminHeader() {
   const [name, setName] = useState("Admin")
   const [role, setRole] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
+  const { settings: notif, update: updateNotif } = useNotificationSettings()
 
   useEffect(() => {
     const supabase = createClient()
@@ -131,6 +135,37 @@ export function AdminHeader() {
             <DropdownMenuItem onClick={() => router.push("/admin/crm/activity")}>
               View activity feed
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {/* Sound alerts — new orders, reviews, support messages */}
+            <div className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Volume2 className="w-3.5 h-3.5" />
+                  Sound alerts
+                </span>
+                <Switch
+                  checked={notif.enabled}
+                  onCheckedChange={(v) => {
+                    updateNotif({ enabled: v })
+                    if (v) playChime(notif.volume)
+                  }}
+                  aria-label="Toggle notification sound"
+                />
+              </div>
+              {notif.enabled && (
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={notif.volume}
+                  onChange={(e) => updateNotif({ volume: parseFloat(e.target.value) })}
+                  onMouseUp={() => playChime(notif.volume)}
+                  className="mt-2 w-full accent-amber-500"
+                  aria-label="Notification volume"
+                />
+              )}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 

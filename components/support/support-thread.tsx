@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
+import type { RealtimeChannel } from "@supabase/supabase-js"
 import { formatDateTime } from "@/lib/utils/format"
 import { notifyMessagesUpdated } from "@/hooks/use-unread-messages"
 
@@ -35,7 +37,11 @@ export function SupportThread({
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
   const [loadingEarlier, setLoadingEarlier] = useState(false)
+  const [otherTyping, setOtherTyping] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTypingSent = useRef(0)
 
   function mergeAppend(incoming: SupportMessage[]) {
     if (incoming.length === 0) return
@@ -97,6 +103,55 @@ export function SupportThread({
     return () => clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, messages.length])
+
+  // Realtime: typing indicator (broadcast) + instant new messages (RLS-scoped
+  // postgres_changes). Falls back to polling above if Realtime isn't enabled.
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`support:${orderId}`, { config: { broadcast: { self: false } } })
+      .on("broadcast", { event: "typing" }, (p) => {
+        const r = (p.payload as { role?: string })?.role
+        if (r && r !== role) {
+          setOtherTyping(true)
+          if (typingTimer.current) clearTimeout(typingTimer.current)
+          typingTimer.current = setTimeout(() => setOtherTyping(false), 3000)
+        }
+      })
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "support_messages",
+          filter: `order_id=eq.${orderId}`,
+        },
+        (payload) => {
+          const m = payload.new as unknown as SupportMessage
+          if (m.sender_role !== role) {
+            mergeAppend([m])
+            setOtherTyping(false)
+          }
+        },
+      )
+      .subscribe()
+    channelRef.current = channel
+    return () => {
+      supabase.removeChannel(channel)
+      channelRef.current = null
+    }
+  }, [orderId, role])
+
+  function handleTyping() {
+    const now = Date.now()
+    if (now - lastTypingSent.current < 1500) return
+    lastTypingSent.current = now
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { role },
+    })
+  }
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "nearest" })
@@ -189,10 +244,19 @@ export function SupportThread({
         )}
         <div ref={endRef} />
       </div>
+      {otherTyping && (
+        <div className={`px-4 pb-1 text-xs ${muted}`}>
+          {role === "admin" ? "Customer" : "Ajabu Lighting"} is typing
+          <span className="animate-pulse">…</span>
+        </div>
+      )}
       <div className="flex gap-2 border-t border-white/[0.06] p-3">
         <textarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value)
+            handleTyping()
+          }}
           onKeyDown={onKeyDown}
           rows={2}
           placeholder={
