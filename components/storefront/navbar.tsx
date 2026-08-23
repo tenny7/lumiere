@@ -25,6 +25,8 @@ export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [isStaff, setIsStaff] = useState(false)
+  const [signedIn, setSignedIn] = useState(false)
+  const [initials, setInitials] = useState("")
   const cartCount = useCartCount()
   const wishlistCount = useWishlistCount()
   const unreadMessages = useUnreadMessages()
@@ -35,22 +37,35 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Show an Admin link for staff/admin users
+  // Determine sign-in state, staff role, and the user's initials for the avatar.
   useEffect(() => {
     const supabase = createClient()
-    async function checkRole() {
+    async function checkUser() {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        setSignedIn(false)
+        setInitials("")
+        setIsStaff(false)
+        return
+      }
+      setSignedIn(true)
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, full_name")
         .eq("id", user.id)
         .single()
       setIsStaff(!!profile && profile.role !== "customer")
+      const source = profile?.full_name || user.email || ""
+      const parts = source.trim().split(/\s+/)
+      const init =
+        parts.length >= 2
+          ? (parts[0][0] || "") + (parts[1][0] || "")
+          : source.slice(0, 2)
+      setInitials(init.toUpperCase())
     }
-    checkRole()
+    checkUser()
   }, [])
 
   function openTour() {
@@ -158,14 +173,6 @@ export function Navbar() {
               )}
             </Link>
             <Link
-              href="/account"
-              aria-label="My account"
-              title="My account"
-              className="text-muted-foreground hover:text-warm-white transition-colors hidden sm:block"
-            >
-              <User className="w-[18px] h-[18px]" strokeWidth={1.5} />
-            </Link>
-            <Link
               href="/cart"
               aria-label="Cart"
               title="Cart"
@@ -178,6 +185,32 @@ export function Navbar() {
                 </span>
               )}
             </Link>
+            {/* Account — rightmost. Initials avatar when signed in, else Sign In / Sign Up. */}
+            {signedIn ? (
+              <Link
+                href="/account"
+                aria-label="My account"
+                title="My account"
+                className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-black text-[0.7rem] font-semibold hover:bg-amber-400 transition-colors"
+              >
+                {initials || <User className="w-4 h-4" />}
+              </Link>
+            ) : (
+              <div className="hidden sm:flex items-center gap-3">
+                <Link
+                  href="/login"
+                  className="text-[0.7rem] font-medium tracking-[0.12em] uppercase text-muted-foreground hover:text-warm-white transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="text-[0.7rem] font-medium tracking-[0.12em] uppercase bg-amber-500 text-black px-3 py-1.5 hover:bg-amber-400 transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
             <button
               className="lg:hidden text-muted-foreground hover:text-warm-white transition-colors"
               onClick={() => setMobileOpen(!mobileOpen)}
