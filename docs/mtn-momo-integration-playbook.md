@@ -50,6 +50,12 @@ Captures the exact steps, the gotchas we hit, and the documents to submit.
 
 ## 2. Step-by-step integration
 
+> **Fast path (recommended):** once you have a Primary Key, run
+> `MOMO_COLLECTION_PRIMARY_KEY=<key> node scripts/momo-setup.mjs`. It provisions
+> the sandbox API user/key, creates or safely merges `.env.local` (keeping your
+> other variables), and smoke-tests token → requesttopay → status — replacing
+> Steps 2–5 below. The manual steps remain here for reference and for production.
+
 ### Step 1 — Get a sandbox subscription key
 1. Sign up / log in at **https://momodeveloper.mtn.com** (the `.com`).
 2. Subscribe to the **Collection** product.
