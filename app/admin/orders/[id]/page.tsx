@@ -137,7 +137,7 @@ export default async function OrderDetailPage({
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" render={<Link href="/admin/orders" />}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -152,7 +152,7 @@ export default async function OrderDetailPage({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"

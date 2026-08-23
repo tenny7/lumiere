@@ -279,33 +279,33 @@ export default async function AdminDashboard() {
                 <Link
                   key={order.id}
                   href={`/admin/orders/${order.id}`}
-                  className="flex items-center justify-between hover:bg-muted/50 -mx-2 px-2 py-1 rounded-md transition-colors"
+                  className="flex items-center justify-between gap-3 hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-md transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 shrink-0 rounded-full bg-muted flex items-center justify-center">
                       <Package className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium font-mono">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium font-mono truncate">
                         {order.order_number}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {order.customer?.full_name || "—"}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right flex items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                     <Badge
                       variant="secondary"
-                      className={`text-[0.6rem] ${statusColors[order.status]}`}
+                      className={`hidden sm:inline-flex text-[0.6rem] ${statusColors[order.status]}`}
                     >
                       {ORDER_STATUS_LABELS[order.status]}
                     </Badge>
-                    <div>
-                      <p className="text-sm font-medium">
+                    <div className="text-right">
+                      <p className="text-sm font-medium whitespace-nowrap">
                         {formatCurrency(order.total, order.currency)}
                       </p>
-                      <p className="text-[0.6rem] text-muted-foreground">
+                      <p className="text-[0.6rem] text-muted-foreground whitespace-nowrap">
                         {formatDateTime(order.created_at)}
                       </p>
                     </div>

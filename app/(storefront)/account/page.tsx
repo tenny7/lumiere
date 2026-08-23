@@ -113,7 +113,7 @@ export default async function AccountPage() {
           <form action="/api/auth/signout" method="POST">
             <button
               type="submit"
-              className="w-full text-left group border border-white/[0.06] p-6 hover:border-rose-500/30 transition-colors"
+              className="w-full text-left group border border-white/[0.06] p-6 hover:border-rose-500/30 transition-colors cursor-pointer"
             >
               <LogOut className="w-5 h-5 text-rose-400 mb-3" strokeWidth={1.5} />
               <h3 className="font-serif text-lg mb-1">Sign Out</h3>
