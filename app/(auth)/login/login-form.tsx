@@ -15,7 +15,11 @@ export function LoginForm() {
   const redirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState(
+    searchParams.get("error") === "link_invalid"
+      ? "That link is invalid or has expired. Please sign in or request a new one."
+      : "",
+  )
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -62,7 +66,11 @@ export function LoginForm() {
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}${redirect}` },
+      options: {
+        // Magic links also come back with a code to exchange — send them
+        // through the callback so the session is actually created.
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
+      },
     })
 
     if (authError) {

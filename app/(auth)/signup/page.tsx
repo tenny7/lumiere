@@ -25,7 +25,9 @@ export default function SignupPage() {
       password,
       options: {
         data: { full_name: fullName, phone },
-        emailRedirectTo: `${window.location.origin}/`,
+        // Route the confirmation link through the callback so it actually
+        // establishes a session, then lands on the home page signed in.
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/")}`,
       },
     })
 
