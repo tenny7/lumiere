@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
+import { notifyAdminsNewMessage } from "@/lib/mail/admin-notify"
 import { z } from "zod"
 
 const sendSchema = z.object({
@@ -156,6 +157,21 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       console.error("Support email failed:", e)
     }
+  }
+
+  // When a customer messages, email the admins.
+  if (senderRole === "customer") {
+    const { data: sender } = await adminDb
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single()
+    await notifyAdminsNewMessage({
+      orderId,
+      orderNumber: order.order_number,
+      customerName: sender?.full_name,
+      body,
+    })
   }
 
   return NextResponse.json({ message })

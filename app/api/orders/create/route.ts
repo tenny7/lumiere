@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { evaluateCoupon, type CouponRow } from "@/lib/utils/coupon"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { normalizeInternationalPhone } from "@/lib/utils/phone"
+import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { z } from "zod"
 
 const shippingSchema = z.object({
@@ -210,6 +211,15 @@ export async function POST(request: NextRequest) {
     if (couponId) {
       await adminDb.rpc("increment_coupon_uses", { p_coupon_id: couponId })
     }
+
+    // Email the admins that a new order was placed (best-effort).
+    await notifyAdminsNewOrder({
+      id: order.id,
+      order_number: order.order_number,
+      total,
+      currency,
+      customerName: fullName,
+    })
 
     return NextResponse.json({
       orderId: order.id,
