@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { X } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { mergeGuestCart } from "@/lib/utils/cart"
@@ -20,8 +21,15 @@ export function LoginForm() {
       ? "That link is invalid or has expired. Please sign in or request a new one."
       : "",
   )
-  const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Magic-link modal (email-only, no password) — kept separate so it's clear
+  // the password field isn't involved.
+  const [magicOpen, setMagicOpen] = useState(false)
+  const [magicEmail, setMagicEmail] = useState("")
+  const [magicError, setMagicError] = useState("")
+  const [magicSent, setMagicSent] = useState(false)
+  const [magicLoading, setMagicLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -55,33 +63,41 @@ export function LoginForm() {
     router.refresh()
   }
 
-  async function handleMagicLink() {
-    if (!email) {
-      setError("Please enter your email address first")
+  function openMagicLink() {
+    setMagicEmail(email) // prefill with whatever they've typed
+    setMagicError("")
+    setMagicSent(false)
+    setMagicOpen(true)
+  }
+
+  async function sendMagicLink(e: React.FormEvent) {
+    e.preventDefault()
+    const target = magicEmail.trim()
+    if (!target) {
+      setMagicError("Please enter your email address.")
       return
     }
-    setError("")
-    setLoading(true)
+    setMagicError("")
+    setMagicLoading(true)
 
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
+      email: target,
       options: {
-        // Magic links also come back with a code to exchange — send them
-        // through the callback so the session is actually created.
+        // Magic links come back with a code to exchange — route through the
+        // callback so the session is actually created.
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
       },
     })
 
     if (authError) {
-      setError(authError.message || "Could not send the magic link. Please try again.")
-      setLoading(false)
+      setMagicError(authError.message || "Could not send the link. Please try again.")
+      setMagicLoading(false)
       return
     }
 
-    setError("")
-    setLoading(false)
-    setSent(true)
+    setMagicLoading(false)
+    setMagicSent(true)
   }
 
   return (
@@ -95,11 +111,6 @@ export function LoginForm() {
         {error && (
           <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded">
             {error}
-          </div>
-        )}
-        {sent && (
-          <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm rounded">
-            Check your email for the sign-in link.
           </div>
         )}
 
@@ -146,16 +157,25 @@ export function LoginForm() {
         >
           {loading ? "Signing in..." : "Sign In"}
         </button>
-
-        <button
-          type="button"
-          onClick={handleMagicLink}
-          disabled={loading}
-          className="w-full py-3 border border-[#242320] text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 transition-colors disabled:opacity-50"
-        >
-          Send Magic Link
-        </button>
       </form>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3 my-5">
+        <span className="h-px flex-1 bg-[#242320]" />
+        <span className="text-[0.6rem] tracking-[0.2em] uppercase text-[#8a8478]">or</span>
+        <span className="h-px flex-1 bg-[#242320]" />
+      </div>
+
+      <button
+        type="button"
+        onClick={openMagicLink}
+        className="w-full py-3 border border-[#242320] text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 transition-colors"
+      >
+        Email me a sign-in link
+      </button>
+      <p className="text-center text-xs text-[#8a8478] mt-2">
+        No password needed — we&apos;ll send a one-time link to your inbox.
+      </p>
 
       <p className="text-sm text-[#8a8478] text-center mt-8">
         Don&apos;t have an account?{" "}
@@ -166,6 +186,86 @@ export function LoginForm() {
           Create one
         </Link>
       </p>
+
+      {/* Magic-link modal — asks for email only */}
+      {magicOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setMagicOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-[#111110] border border-[#242320] rounded-xl p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setMagicOpen(false)}
+              aria-label="Close"
+              className="absolute top-4 right-4 text-[#8a8478] hover:text-[#f5f0e8] transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {magicSent ? (
+              <div className="text-center py-2">
+                <h2 className="font-serif text-xl font-light mb-2 text-[#f5f0e8]">
+                  Check your email
+                </h2>
+                <p className="text-sm text-[#8a8478] leading-relaxed mb-6">
+                  We sent a one-time sign-in link to{" "}
+                  <strong className="text-[#f5f0e8]">{magicEmail}</strong>. Open
+                  it to sign in — no password needed.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setMagicOpen(false)}
+                  className="w-full py-3 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="font-serif text-xl font-light mb-2 text-[#f5f0e8]">
+                  Sign in with a link
+                </h2>
+                <p className="text-sm text-[#8a8478] leading-relaxed mb-5">
+                  Enter your email and we&apos;ll send you a secure one-time link
+                  to sign in. No password required.
+                </p>
+                <form onSubmit={sendMagicLink} className="space-y-4">
+                  {magicError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded">
+                      {magicError}
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      autoFocus
+                      value={magicEmail}
+                      onChange={(e) => setMagicEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={magicLoading}
+                    className="w-full py-3 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors disabled:opacity-50"
+                  >
+                    {magicLoading ? "Sending..." : "Send sign-in link"}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
