@@ -10,6 +10,9 @@ export function playChime(volume = 0.5) {
       (window as unknown as { webkitAudioContext: typeof AudioContext })
         .webkitAudioContext
     const ctx = new Ctx()
+    // Browsers start the context suspended until a user gesture; resume so the
+    // chime is audible once the admin has interacted with the page at all.
+    if (ctx.state === "suspended") ctx.resume().catch(() => {})
     const notes = [
       { freq: 880, at: 0 },
       { freq: 1174.66, at: 0.12 },
