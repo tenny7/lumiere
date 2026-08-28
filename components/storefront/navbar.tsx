@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search, User, ShoppingCart, Menu, X, Shield, Heart, HelpCircle, MessageSquare } from "lucide-react"
+import { Search, User, ShoppingCart, Menu, X, Shield, Heart, HelpCircle, MessageSquare, Package, LogOut } from "lucide-react"
 import { useCartCount } from "@/hooks/use-cart-count"
 import { useWishlistCount } from "@/hooks/use-wishlist-count"
 import { useUnreadMessages } from "@/hooks/use-unread-messages"
@@ -27,6 +27,7 @@ export function Navbar() {
   const [isStaff, setIsStaff] = useState(false)
   const [signedIn, setSignedIn] = useState(false)
   const [initials, setInitials] = useState("")
+  const [accountOpen, setAccountOpen] = useState(false)
   const cartCount = useCartCount()
   const wishlistCount = useWishlistCount()
   const unreadMessages = useUnreadMessages()
@@ -71,6 +72,18 @@ export function Navbar() {
   function openTour() {
     setMobileOpen(false)
     window.dispatchEvent(new Event(TOUR_EVENT))
+  }
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setSignedIn(false)
+    setInitials("")
+    setIsStaff(false)
+    setAccountOpen(false)
+    setMobileOpen(false)
+    router.push("/")
+    router.refresh()
   }
 
   function submitSearch(e: React.FormEvent) {
@@ -187,21 +200,97 @@ export function Navbar() {
                 </span>
               )}
             </Link>
-            {/* Account — rightmost. Initials avatar when signed in, else Sign In / Sign Up. */}
+            {/* Account — rightmost. Avatar → dropdown when signed in, else Sign In / Sign Up. */}
             {signedIn ? (
-              <Link
-                href="/account"
-                aria-label="My account"
-                title="My account"
-                className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-black text-[0.7rem] font-semibold hover:bg-amber-400 transition-colors"
-              >
-                {initials || <User className="w-4 h-4" />}
-              </Link>
+              <div className="relative hidden sm:block">
+                <button
+                  onClick={() => setAccountOpen((o) => !o)}
+                  aria-label="My account"
+                  aria-haspopup="menu"
+                  aria-expanded={accountOpen}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-black text-[0.7rem] font-semibold hover:bg-amber-400 transition-colors"
+                >
+                  {initials || <User className="w-4 h-4" />}
+                </button>
+                {accountOpen && (
+                  <>
+                    {/* click-away backdrop */}
+                    <button
+                      aria-hidden
+                      tabIndex={-1}
+                      onClick={() => setAccountOpen(false)}
+                      className="fixed inset-0 z-40 cursor-default"
+                    />
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full mt-2 w-56 z-50 bg-black/95 backdrop-blur-xl border border-white/10 rounded-lg py-2 shadow-xl"
+                    >
+                      <Link
+                        href="/account"
+                        role="menuitem"
+                        onClick={() => setAccountOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-warm-white hover:bg-white/5 transition-colors"
+                      >
+                        <User className="w-4 h-4" strokeWidth={1.5} /> My Account
+                      </Link>
+                      <Link
+                        href="/account/orders"
+                        role="menuitem"
+                        onClick={() => setAccountOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-warm-white hover:bg-white/5 transition-colors"
+                      >
+                        <Package className="w-4 h-4" strokeWidth={1.5} /> My Orders
+                      </Link>
+                      <Link
+                        href="/account/wishlist"
+                        role="menuitem"
+                        onClick={() => setAccountOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-warm-white hover:bg-white/5 transition-colors"
+                      >
+                        <Heart className="w-4 h-4" strokeWidth={1.5} /> Wishlist
+                      </Link>
+                      <Link
+                        href="/account/messages"
+                        role="menuitem"
+                        onClick={() => setAccountOpen(false)}
+                        className="flex items-center justify-between gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-warm-white hover:bg-white/5 transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <MessageSquare className="w-4 h-4" strokeWidth={1.5} /> Messages
+                        </span>
+                        {unreadMessages > 0 && (
+                          <span className="min-w-4 h-4 px-1 bg-amber text-black text-[0.55rem] font-semibold rounded-full flex items-center justify-center">
+                            {unreadMessages > 99 ? "99+" : unreadMessages}
+                          </span>
+                        )}
+                      </Link>
+                      {isStaff && (
+                        <Link
+                          href="/admin"
+                          role="menuitem"
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-amber hover:text-amber-300 hover:bg-white/5 transition-colors"
+                        >
+                          <Shield className="w-4 h-4" strokeWidth={1.5} /> Admin Dashboard
+                        </Link>
+                      )}
+                      <div className="my-1 border-t border-white/10" />
+                      <button
+                        onClick={handleSignOut}
+                        role="menuitem"
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-warm-white hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" strokeWidth={1.5} /> Sign Out
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
-              <div className="hidden sm:flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="text-[0.7rem] font-medium tracking-[0.12em] uppercase text-muted-foreground hover:text-warm-white transition-colors"
+                  className="text-[0.7rem] font-medium tracking-[0.12em] uppercase text-warm-white border border-white/15 px-3 py-1.5 hover:border-amber-500 hover:text-amber transition-colors"
                 >
                   Sign In
                 </Link>
@@ -259,6 +348,53 @@ export function Navbar() {
               </Link>
             ))}
             <div className="pt-4 border-t border-white/5 space-y-4">
+              {/* Auth actions — kept prominent so they're never hidden on mobile */}
+              {!signedIn && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-center text-[0.72rem] font-medium tracking-[0.15em] uppercase text-warm-white border border-white/15 py-2.5 hover:border-amber-500 hover:text-amber transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-center text-[0.72rem] font-medium tracking-[0.15em] uppercase bg-amber-500 text-black py-2.5 hover:bg-amber-400 transition-colors"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+              {signedIn && (
+                <>
+                  <Link
+                    href="/account/orders"
+                    className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Package className="w-4 h-4" strokeWidth={1.5} />
+                    My Orders
+                  </Link>
+                  <Link
+                    href="/account"
+                    className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <User className="w-4 h-4" strokeWidth={1.5} />
+                    My Account
+                  </Link>
+                  <Link
+                    href="/account/messages"
+                    className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
+                    Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+                  </Link>
+                </>
+              )}
               <Link
                 href="/account/wishlist"
                 className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
@@ -278,24 +414,6 @@ export function Navbar() {
                 <ShoppingCart className="w-4 h-4" strokeWidth={1.5} />
                 Cart{cartCount > 0 ? ` (${cartCount})` : ""}
               </Link>
-              {signedIn && (
-                <Link
-                  href="/account/messages"
-                  className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
-                  Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
-                </Link>
-              )}
-              <Link
-                href="/account"
-                className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
-                onClick={() => setMobileOpen(false)}
-              >
-                <User className="w-4 h-4" strokeWidth={1.5} />
-                My Account
-              </Link>
               <button
                 onClick={openTour}
                 className="flex items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors"
@@ -312,6 +430,15 @@ export function Navbar() {
                   <Shield className="w-4 h-4" strokeWidth={1.5} />
                   Admin Dashboard
                 </Link>
+              )}
+              {signedIn && (
+                <button
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-2 text-sm font-light tracking-wider text-muted-foreground hover:text-warm-white transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                  Sign Out
+                </button>
               )}
             </div>
           </div>
