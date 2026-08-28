@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
+import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { createHmac, timingSafeEqual } from "crypto"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
 
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     const { data: order } = await adminDb
       .from("orders")
       .select(
-        "id, order_number, customer_id, total, shipping_address, profiles(email, full_name)",
+        "id, order_number, customer_id, total, currency, shipping_address, profiles(email, full_name)",
       )
       .eq("order_number", externalId)
       .single()
@@ -181,6 +182,20 @@ export async function POST(request: NextRequest) {
           console.error("Webhook: Failed to send email:", emailError)
         }
       }
+
+      // Payment succeeded — the order is placed. Notify admins once; the
+      // idempotency guard above (skip if already successful/failed) keeps this
+      // from firing twice across webhook + polling.
+      const adminShipping = (order.shipping_address || {}) as {
+        full_name?: string
+      }
+      await notifyAdminsNewOrder({
+        id: order.id,
+        order_number: order.order_number,
+        total: Number(order.total),
+        currency: order.currency,
+        customerName: adminShipping.full_name,
+      })
     }
 
     return NextResponse.json({ received: true })

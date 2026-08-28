@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getPaymentStatus } from "@/lib/momo/client"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
+import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
 
 export async function GET(
@@ -25,7 +26,7 @@ export async function GET(
     const { data: payment, error } = await adminDb
       .from("payments")
       .select(
-        "*, orders(customer_id, order_number, total, status, shipping_address)",
+        "*, orders(customer_id, order_number, total, currency, status, shipping_address)",
       )
       .eq("id", id)
       .single()
@@ -170,6 +171,19 @@ export async function GET(
       } catch (emailError) {
         console.error("Failed to send confirmation email:", emailError)
       }
+
+      // Payment succeeded — the order is placed. Notify admins once (this block
+      // only runs on the pending→successful transition, so no duplicates).
+      const shipping = (payment.orders.shipping_address || {}) as {
+        full_name?: string
+      }
+      await notifyAdminsNewOrder({
+        id: payment.order_id,
+        order_number: payment.orders.order_number,
+        total: Number(payment.orders.total),
+        currency: payment.orders.currency,
+        customerName: shipping.full_name,
+      })
 
       return NextResponse.json({
         paymentId: payment.id,

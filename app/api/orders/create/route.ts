@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { evaluateCoupon, type CouponRow } from "@/lib/utils/coupon"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { normalizeInternationalPhone } from "@/lib/utils/phone"
-import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { z } from "zod"
 
 const shippingSchema = z.object({
@@ -212,14 +211,10 @@ export async function POST(request: NextRequest) {
       await adminDb.rpc("increment_coupon_uses", { p_coupon_id: couponId })
     }
 
-    // Email the admins that a new order was placed (best-effort).
-    await notifyAdminsNewOrder({
-      id: order.id,
-      order_number: order.order_number,
-      total,
-      currency,
-      customerName: fullName,
-    })
+    // NOTE: admins are notified only when the order is actually PLACED — on COD
+    // placement (/api/payments/cod) or when a MoMo payment succeeds
+    // (/api/payments/[id]/status and the webhook) — not here, since this runs at
+    // "Continue to Payment" before the customer has committed.
 
     return NextResponse.json({
       orderId: order.id,

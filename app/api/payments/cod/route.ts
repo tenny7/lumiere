@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { COD_METHOD_VALUE } from "@/lib/utils/constants"
+import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { z } from "zod"
 
 const codSchema = z.object({
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Verify the order belongs to this user and is still pending.
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, total, currency, status, customer_id")
+      .select("id, order_number, total, currency, status, customer_id, shipping_address")
       .eq("id", orderId)
       .single()
 
@@ -92,6 +93,16 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       )
     }
+
+    // The order is now genuinely placed — notify admins (best-effort).
+    const shipping = (order.shipping_address || {}) as { full_name?: string }
+    await notifyAdminsNewOrder({
+      id: order.id,
+      order_number: order.order_number,
+      total: order.total,
+      currency: order.currency,
+      customerName: shipping.full_name,
+    })
 
     return NextResponse.json({ paymentId: payment.id, status: payment.status })
   } catch (error) {
