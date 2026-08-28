@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, FileText } from "lucide-react"
 import { SupportThread, type SupportMessage } from "@/components/support/support-thread"
+import { SupportBlockToggle } from "@/components/admin/support-block-toggle"
 
 export const dynamic = "force-dynamic"
 
@@ -20,15 +21,17 @@ export default async function AdminSupportChatPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, total, currency, status, customer:profiles(full_name, email), payments(status, provider_metadata, initiated_at)",
+      "id, order_number, total, currency, status, customer:profiles(id, full_name, email, support_blocked), payments(status, provider_metadata, initiated_at)",
     )
     .eq("id", orderId)
     .single()
   if (!order) notFound()
 
   const customer = order.customer as unknown as {
+    id: string
     full_name: string | null
     email: string | null
+    support_blocked: boolean | null
   } | null
 
   // Latest payment for context (reason / transaction id).
@@ -82,9 +85,16 @@ export default async function AdminSupportChatPage({
             <h1 className="text-xl font-semibold tracking-tight font-mono">
               {order.order_number}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {customer?.full_name || customer?.email || "—"} ·{" "}
-              {formatCurrency(order.total, order.currency)}
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <span>
+                {customer?.full_name || customer?.email || "—"} ·{" "}
+                {formatCurrency(order.total, order.currency)}
+              </span>
+              {customer?.support_blocked && (
+                <Badge variant="destructive" className="text-[0.6rem]">
+                  Messaging blocked
+                </Badge>
+              )}
             </p>
           </div>
         </div>
@@ -94,6 +104,13 @@ export default async function AdminSupportChatPage({
               Payment: {latestPayment.status}
               {reason ? ` · ${reason}` : ""}
             </Badge>
+          )}
+          {customer?.id && (
+            <SupportBlockToggle
+              userId={customer.id}
+              initialBlocked={!!customer.support_blocked}
+              customerName={customer.full_name || customer.email}
+            />
           )}
           <Button
             variant="outline"

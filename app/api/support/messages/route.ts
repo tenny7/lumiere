@@ -14,7 +14,7 @@ const sendSchema = z.object({
 async function resolveAccess(userId: string, orderId: string) {
   const adminDb = createAdminClient()
   const [{ data: profile }, { data: order }] = await Promise.all([
-    adminDb.from("profiles").select("role").eq("id", userId).single(),
+    adminDb.from("profiles").select("role, support_blocked").eq("id", userId).single(),
     adminDb
       .from("orders")
       .select("id, order_number, customer_id")
@@ -23,8 +23,13 @@ async function resolveAccess(userId: string, orderId: string) {
   ])
   const isAdmin = !!profile && ["admin", "super_admin"].includes(profile.role)
   const isOwner = !!order && order.customer_id === userId
-  return { adminDb, order, isAdmin, isOwner }
+  const blocked = !!profile?.support_blocked
+  return { adminDb, order, isAdmin, isOwner, blocked }
 }
+
+// Anti-spam: a customer may send at most this many messages per rolling window.
+const RATE_LIMIT_MAX = 12
+const RATE_LIMIT_WINDOW_MS = 60_000
 
 const PAGE_SIZE = 30
 
@@ -103,7 +108,7 @@ export async function POST(request: NextRequest) {
   }
   const { orderId, body } = parsed.data
 
-  const { adminDb, order, isAdmin, isOwner } = await resolveAccess(
+  const { adminDb, order, isAdmin, isOwner, blocked } = await resolveAccess(
     user.id,
     orderId,
   )
@@ -115,6 +120,35 @@ export async function POST(request: NextRequest) {
   }
 
   const senderRole = isAdmin ? "admin" : "customer"
+
+  // Abuse controls apply to customers only — never to staff.
+  if (senderRole === "customer") {
+    if (blocked) {
+      return NextResponse.json(
+        {
+          error:
+            "Your messaging has been suspended by support. Please reach us by phone or email.",
+        },
+        { status: 403 },
+      )
+    }
+    // Rate limit: cap messages per rolling window to stop spam floods.
+    const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString()
+    const { count } = await adminDb
+      .from("support_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("sender_id", user.id)
+      .gte("created_at", since)
+    if ((count ?? 0) >= RATE_LIMIT_MAX) {
+      return NextResponse.json(
+        {
+          error:
+            "You're sending messages too quickly. Please wait a moment and try again.",
+        },
+        { status: 429 },
+      )
+    }
+  }
   const { data: message, error } = await adminDb
     .from("support_messages")
     .insert({

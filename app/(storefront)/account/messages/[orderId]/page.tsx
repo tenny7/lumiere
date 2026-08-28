@@ -25,6 +25,13 @@ export default async function OrderChatPage({
     .single()
   if (!order || order.customer_id !== user.id) notFound()
 
+  // Has an admin suspended this customer's messaging?
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("support_blocked")
+    .eq("id", user.id)
+    .single()
+
   // Latest page of messages (ascending for display).
   const { data: rows } = await supabase
     .from("support_messages")
@@ -67,6 +74,7 @@ export default async function OrderChatPage({
           role="customer"
           initialMessages={page as SupportMessage[]}
           initialHasMore={hasMore}
+          blocked={!!me?.support_blocked}
         />
       </div>
     </div>

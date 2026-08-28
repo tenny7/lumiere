@@ -25,17 +25,21 @@ export function SupportThread({
   role,
   initialMessages,
   initialHasMore = false,
+  blocked = false,
 }: {
   orderId: string
   role: "admin" | "customer"
   initialMessages: SupportMessage[]
   initialHasMore?: boolean
+  /** Customer surface only: their messaging has been suspended by an admin. */
+  blocked?: boolean
 }) {
   const isAdminSurface = role === "admin"
   const [messages, setMessages] = useState<SupportMessage[]>(initialMessages)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState("")
   const [loadingEarlier, setLoadingEarlier] = useState(false)
   const [otherTyping, setOtherTyping] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
@@ -171,7 +175,12 @@ export function SupportThread({
       if (res.ok && data.message) {
         mergeAppend([data.message])
         setInput("")
+        setSendError("")
+      } else {
+        setSendError(data.error || "Couldn't send your message. Please try again.")
       }
+    } catch {
+      setSendError("Network error. Please try again.")
     } finally {
       setSending(false)
     }
@@ -250,28 +259,42 @@ export function SupportThread({
           <span className="animate-pulse">…</span>
         </div>
       )}
-      <div className="flex gap-2 border-t border-white/[0.06] p-3">
-        <textarea
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-            handleTyping()
-          }}
-          onKeyDown={onKeyDown}
-          rows={2}
-          placeholder={
-            isAdminSurface ? "Message the customer…" : "Message the store…"
-          }
-          className={inputCls}
-        />
-        <button
-          onClick={send}
-          disabled={sending || !input.trim()}
-          className={btnCls}
-        >
-          {sending ? "…" : "Send"}
-        </button>
-      </div>
+      {blocked ? (
+        <div className="border-t border-white/[0.06] p-4 text-center">
+          <p className={`text-sm ${muted}`}>
+            Your messaging has been suspended by support. Please reach us by
+            phone or email if you need help.
+          </p>
+        </div>
+      ) : (
+        <div className="border-t border-white/[0.06]">
+          {sendError && (
+            <p className="px-3 pt-2 text-xs text-rose-400">{sendError}</p>
+          )}
+          <div className="flex gap-2 p-3">
+            <textarea
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value)
+                handleTyping()
+              }}
+              onKeyDown={onKeyDown}
+              rows={2}
+              placeholder={
+                isAdminSurface ? "Message the customer…" : "Message the store…"
+              }
+              className={inputCls}
+            />
+            <button
+              onClick={send}
+              disabled={sending || !input.trim()}
+              className={btnCls}
+            >
+              {sending ? "…" : "Send"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
