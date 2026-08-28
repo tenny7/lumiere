@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { formatDateTime } from "@/lib/utils/format"
 import { ArrowLeft, ArrowRight, MessageSquare } from "lucide-react"
+import { NewMessageButton, type OrderOption } from "@/components/support/new-message-button"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +13,7 @@ type Row = {
   body: string
   read_at: string | null
   created_at: string
-  orders: { order_number: string } | null
+  orders: { order_number: string; customer_id: string } | null
 }
 
 type Thread = {
@@ -30,11 +31,24 @@ export default async function MessagesPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect("/login?redirect=/account/messages")
 
-  // RLS scopes these to the signed-in customer's own orders.
+  // Scope explicitly to the signed-in user's OWN orders. Relying on RLS alone
+  // breaks for staff/admins, whose policies can see every order's messages —
+  // which would list other customers' orders here and 404 on open.
   const { data } = await supabase
     .from("support_messages")
-    .select("order_id, sender_role, body, read_at, created_at, orders(order_number)")
+    .select(
+      "order_id, sender_role, body, read_at, created_at, orders!inner(order_number, customer_id)",
+    )
+    .eq("orders.customer_id", user.id)
     .order("created_at", { ascending: false })
+
+  // The user's own orders, for starting a new conversation.
+  const { data: orderRows } = await supabase
+    .from("orders")
+    .select("id, order_number, status, created_at")
+    .eq("customer_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(100)
 
   const rows = (data || []) as unknown as Row[]
   const byOrder = new Map<string, Thread>()
@@ -65,10 +79,15 @@ export default async function MessagesPage() {
           My Account
         </Link>
 
-        <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
-          Support
-        </p>
-        <h1 className="font-serif text-4xl font-light mb-10">Messages</h1>
+        <div className="flex items-end justify-between gap-4 mb-10">
+          <div>
+            <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
+              Support
+            </p>
+            <h1 className="font-serif text-4xl font-light">Messages</h1>
+          </div>
+          <NewMessageButton orders={(orderRows || []) as OrderOption[]} />
+        </div>
 
         {threads.length > 0 ? (
           <div className="space-y-3">
@@ -102,7 +121,8 @@ export default async function MessagesPage() {
               className="w-10 h-10 text-[#8a8478]/40 mx-auto mb-4"
               strokeWidth={1.5}
             />
-            <p className="text-[#8a8478]">No messages yet.</p>
+            <p className="text-[#8a8478] mb-6">No messages yet.</p>
+            <NewMessageButton orders={(orderRows || []) as OrderOption[]} />
           </div>
         )}
       </div>

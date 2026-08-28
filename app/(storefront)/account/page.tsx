@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Package, Heart, Settings, LogOut, Sparkles, ArrowRight } from "lucide-react"
+import { Package, Heart, Settings, LogOut, Sparkles, ArrowRight, MessageSquare } from "lucide-react"
 import { RoleBadge } from "@/components/role-badge"
 
 export const dynamic = "force-dynamic"
@@ -24,6 +24,15 @@ export default async function AccountPage() {
     .from("orders")
     .select("*", { count: "exact", head: true })
     .eq("customer_id", user.id)
+
+  // Unread replies from support (scoped to this user's own orders — robust even
+  // for staff/admin whose RLS can otherwise see every order's messages).
+  const { count: unreadMessages } = await supabase
+    .from("support_messages")
+    .select("id, orders!inner(customer_id)", { count: "exact", head: true })
+    .eq("orders.customer_id", user.id)
+    .eq("sender_role", "admin")
+    .is("read_at", null)
 
   return (
     <div className="pt-24 pb-16">
@@ -99,6 +108,22 @@ export default async function AccountPage() {
             <Heart className="w-5 h-5 text-amber-400 mb-3" strokeWidth={1.5} />
             <h3 className="font-serif text-lg mb-1">Wishlist</h3>
             <p className="text-sm text-[#8a8478]">Your saved items</p>
+          </Link>
+
+          <Link
+            href="/account/messages"
+            className="group border border-white/[0.06] p-6 hover:border-amber-500/30 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
+              {(unreadMessages || 0) > 0 && (
+                <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-black text-[0.6rem] font-semibold px-2 py-0.5">
+                  {unreadMessages} new
+                </span>
+              )}
+            </div>
+            <h3 className="font-serif text-lg mb-1">Messages</h3>
+            <p className="text-sm text-[#8a8478]">Chat with support</p>
           </Link>
 
           <Link
