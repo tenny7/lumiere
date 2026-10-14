@@ -8,12 +8,22 @@ import { toast } from "sonner"
 import { playChime } from "@/lib/notification-sound"
 import { readNotifSettings } from "@/hooks/use-notification-settings"
 import { notifyMessagesUpdated } from "@/hooks/use-unread-messages"
+import { notifyOrdersUpdated } from "@/hooks/use-orders-needing-attention"
+import { COD_METHOD_VALUE, MOMO_MANUAL_VALUE } from "@/lib/utils/constants"
+
+type PaymentRow = {
+  order_id: string
+  provider: string
+  status: string
+  provider_metadata: { method?: string } | null
+}
 
 /**
- * Mounted in the admin layout. Subscribes to Supabase Realtime for new orders,
- * reviews, and customer support messages, then plays a chime + toast and
- * refreshes the relevant badges. Respects the per-admin sound settings.
- * Requires the tables to be in the `supabase_realtime` publication (00012).
+ * Mounted in the admin layout. Subscribes to Supabase Realtime for new orders
+ * (via payments), reviews, and customer support messages, then plays a chime +
+ * toast and refreshes the relevant badges. Respects the per-admin sound
+ * settings. Requires the tables to be in the `supabase_realtime` publication
+ * (00012 for reviews/support_messages, 00015 for payments).
  */
 export function AdminNotifications() {
   const router = useRouter()
@@ -44,13 +54,41 @@ export function AdminNotifications() {
 
       channel = supabase
         .channel("admin-notifications")
+        // New orders are signalled by their payment, not the order row: orders
+        // are created at "Continue to Payment", before the customer commits.
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "orders" },
+          { event: "INSERT", schema: "public", table: "payments" },
           (payload) => {
-            const n = payload.new as { id: string; order_number?: string }
-            alert(`New order ${n.order_number ?? ""}`.trim(), `/admin/orders/${n.id}`)
-            window.dispatchEvent(new Event("orders:updated"))
+            const p = payload.new as PaymentRow
+            // A manual payment row means the order was just placed
+            // (Cash on Delivery or MoMo transfer). API MoMo rows are created at
+            // initiation, so those wait for the success UPDATE below.
+            if (p.provider === "manual") {
+              const method = p.provider_metadata?.method
+              alert(
+                method === MOMO_MANUAL_VALUE
+                  ? "New order — verify MoMo transfer"
+                  : method === COD_METHOD_VALUE
+                    ? "New Cash on Delivery order"
+                    : "New order placed",
+                `/admin/orders/${p.order_id}`,
+              )
+            }
+            notifyOrdersUpdated()
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "payments" },
+          (payload) => {
+            const p = payload.new as PaymentRow
+            // API MoMo payment confirmed → a paid order is in. (Manual payments
+            // turn successful when an admin marks them paid — no alert.)
+            if (p.status === "successful" && p.provider !== "manual") {
+              alert("New order paid via MoMo", `/admin/orders/${p.order_id}`)
+            }
+            notifyOrdersUpdated()
           },
         )
         .on(

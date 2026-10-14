@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { ORDER_STATUS_LABELS } from "@/lib/utils/constants"
+import { notifyOrdersUpdated } from "@/hooks/use-orders-needing-attention"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -75,6 +76,7 @@ export function OrderStatusUpdater({
             ? "Status updated — customer notified by email"
             : "Status updated",
         )
+        notifyOrdersUpdated()
         startTransition(() => {
           router.refresh()
         })

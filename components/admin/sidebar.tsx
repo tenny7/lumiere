@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useAdminUnreadMessages } from "@/hooks/use-unread-messages"
 import { usePendingReviews } from "@/hooks/use-pending-reviews"
+import { useOrdersNeedingAttention } from "@/hooks/use-orders-needing-attention"
 import {
   Sidebar,
   SidebarContent,
@@ -58,6 +59,7 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const supportUnread = useAdminUnreadMessages()
   const pendingReviews = usePendingReviews()
+  const ordersNeedingAttention = useOrdersNeedingAttention()
   const { setOpenMobile } = useSidebar()
 
   // Close the mobile sidebar after navigating to a new page.
@@ -102,6 +104,11 @@ export function AdminSidebar() {
                   >
                     <item.icon className="w-4 h-4" />
                     <span>{item.title}</span>
+                    {item.href === "/admin/orders" && ordersNeedingAttention > 0 && (
+                      <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[0.6rem] font-semibold text-black">
+                        {ordersNeedingAttention > 99 ? "99+" : ordersNeedingAttention}
+                      </span>
+                    )}
                     {item.href === "/admin/support" && supportUnread > 0 && (
                       <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[0.6rem] font-semibold text-black">
                         {supportUnread > 99 ? "99+" : supportUnread}

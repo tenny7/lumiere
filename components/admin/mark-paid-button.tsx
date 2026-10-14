@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
+import { notifyOrdersUpdated } from "@/hooks/use-orders-needing-attention"
 
 export function MarkPaidButton({ orderId }: { orderId: string }) {
   const router = useRouter()
@@ -24,6 +25,7 @@ export function MarkPaidButton({ orderId }: { orderId: string }) {
       })
       if (res.ok) {
         toast.success("Order marked as paid")
+        notifyOrdersUpdated()
         router.refresh()
       } else {
         toast.error("Failed to mark as paid")
