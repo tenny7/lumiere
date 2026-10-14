@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { MOMO_MANUAL_VALUE } from "@/lib/utils/constants"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsManualMomo } from "@/lib/mail/admin-notify"
+import { escapeHtml as esc } from "@/lib/utils/html"
 import { z } from "zod"
 
 const schema = z.object({
@@ -128,14 +129,6 @@ export async function POST(request: NextRequest) {
     console.error("Manual MoMo error:", error)
     return NextResponse.json({ error: "Failed to record payment" }, { status: 500 })
   }
-}
-
-function esc(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
 }
 
 function customerNoticeHtml({

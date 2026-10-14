@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsNewMessage } from "@/lib/mail/admin-notify"
+import { escapeHtml } from "@/lib/utils/html"
 import { z } from "zod"
 
 const sendSchema = z.object({
@@ -209,14 +210,6 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ message })
-}
-
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
 }
 
 function supportEmailHtml({

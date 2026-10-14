@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
+import { escapeHtml } from "@/lib/utils/html"
 import { z } from "zod"
 
 const contactSchema = z.object({
@@ -68,14 +69,16 @@ export async function POST(request: NextRequest) {
       console.error("Contact CRM capture failed:", crmError)
     }
 
-    // Notify the store inbox (best-effort).
+    // Notify the store inbox (best-effort). Everything the visitor typed is
+    // escaped, so it renders as plain text and can't inject links or markup.
     try {
       await sendMail({
         from: EMAIL_FROM,
         replyTo: email,
         to: EMAIL_REPLY_TO,
-        subject: `New contact message from ${name}`,
-        html: `<p><strong>From:</strong> ${name} (${email})</p><p>${message.replace(/\n/g, "<br/>")}</p>`,
+        // Collapse line breaks/whitespace: the name goes into a header.
+        subject: `New contact message from ${name.replace(/\s+/g, " ").trim()}`,
+        html: `<p><strong>From:</strong> ${escapeHtml(name)} (${escapeHtml(email)})</p><p>${escapeHtml(message).replace(/\r?\n/g, "<br/>")}</p>`,
       })
     } catch (emailError) {
       console.error("Contact email failed:", emailError)

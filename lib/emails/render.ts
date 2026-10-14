@@ -4,6 +4,7 @@
  */
 
 import { formatCurrency } from "@/lib/utils/format"
+import { escapeHtml } from "@/lib/utils/html"
 
 const money = (amount: number) => formatCurrency(amount, "RWF")
 
@@ -212,12 +213,4 @@ export function renderWelcomeEmail(props: {
 </div>
 </body>
 </html>`
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
 }
