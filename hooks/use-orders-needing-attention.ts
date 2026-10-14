@@ -14,11 +14,12 @@ export function notifyOrdersUpdated() {
 const POLL_MS = 60_000
 
 /**
- * Orders needing admin attention — for the sidebar badge. Counts orders that
- * were actually placed (they have a payment that isn't failed/refunded) and are
- * still `pending` (verify the MoMo transfer / dispatch COD) or `confirmed`
- * (paid, ready to process). Abandoned checkouts have no payment, so they're
- * never counted. Relies on staff RLS; non-staff get 0.
+ * Pending orders awaiting payment — for the admin sidebar badge. Counts orders
+ * that were actually placed (they have a payment record) but aren't paid yet:
+ * a MoMo transfer to verify, or Cash on Delivery not yet collected. The count
+ * drops as soon as an order is paid (Mark Paid or a successful MoMo payment).
+ * Abandoned checkouts have no payment, so they're never counted. Relies on
+ * staff RLS; non-staff get 0.
  */
 export function useOrdersNeedingAttention() {
   const [count, setCount] = useState(0)
@@ -38,8 +39,8 @@ export function useOrdersNeedingAttention() {
       const { count: c } = await supabase
         .from("orders")
         .select("id, payments!inner(id)", { count: "exact", head: true })
-        .in("status", ["pending", "confirmed"])
-        .in("payments.status", ["pending", "processing", "successful"])
+        .eq("status", "pending")
+        .in("payments.status", ["pending", "processing"])
       if (active) setCount(c ?? 0)
     }
 
