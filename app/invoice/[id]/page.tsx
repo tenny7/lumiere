@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { PrintButton } from "./print-button"
+import { ReceiptPdfButton, type ReceiptData } from "./receipt-pdf-button"
 
 type SettingsMap = Record<string, unknown>
 
@@ -82,6 +83,39 @@ export default async function InvoicePage({
   }
   const items = (order.items || []) as Item[]
 
+  const receiptData: ReceiptData = {
+    storeName,
+    storeEmail,
+    storePhone,
+    storeAddress: storeAddr
+      ? [storeAddr.line_1, storeAddr.city, storeAddr.region, storeAddr.country]
+          .filter(Boolean)
+          .join(", ")
+      : "",
+    orderNumber: order.order_number,
+    createdAt: order.created_at,
+    status: order.status,
+    currency,
+    billToName: ship.full_name || order.customer?.full_name || "Customer",
+    billToEmail: order.customer?.email || "",
+    billToAddress: [ship.line_1, ship.line_2, ship.city, ship.region, ship.country]
+      .filter(Boolean)
+      .join(", "),
+    billToPhone: ship.phone || order.customer?.phone || "",
+    items: items.map((it) => ({
+      name: it.product_name,
+      sku: it.product_sku,
+      quantity: it.quantity,
+      unitPrice: it.unit_price,
+      totalPrice: it.total_price,
+    })),
+    subtotal: order.subtotal,
+    discount: order.discount_amount || 0,
+    deliveryFee: order.delivery_fee || 0,
+    tax: order.tax_amount || 0,
+    total: order.total,
+  }
+
   return (
     <div className="min-h-screen bg-neutral-100 text-neutral-900 py-8 px-4 print:bg-white print:py-0">
       <div className="mx-auto max-w-3xl">
@@ -93,7 +127,10 @@ export default async function InvoicePage({
           >
             &larr; Back to order
           </a>
-          <PrintButton />
+          <div className="flex items-center gap-2">
+            <PrintButton />
+            <ReceiptPdfButton data={receiptData} />
+          </div>
         </div>
 
         {/* Invoice document */}
