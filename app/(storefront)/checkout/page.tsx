@@ -20,7 +20,7 @@ import {
   MOMO_MANUAL_METHOD,
   MOMO_MANUAL_VALUE,
 } from "@/lib/utils/constants"
-import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus, Banknote, Smartphone } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus, Banknote, Smartphone, Clock } from "lucide-react"
 import { toast } from "sonner"
 
 type Step = "shipping" | "payment" | "confirmation"
@@ -1014,22 +1014,43 @@ export default function CheckoutPage() {
         {/* ═══ STEP 3: CONFIRMATION ═══ */}
         {step === "confirmation" && (
           <div className="text-center py-8">
-            <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
+            {/* Only a completed MoMo (API) payment is confirmed here. A MoMo
+                transfer stays pending until an admin verifies it; Cash on
+                Delivery is placed but unpaid until delivery. */}
+            {isMomoManual ? (
+              <Clock className="w-16 h-16 text-amber-400 mx-auto mb-6" />
+            ) : (
+              <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-6" />
+            )}
             <h1 className="font-serif text-3xl font-light mb-3">
-              Order Confirmed!
+              {isMomoManual
+                ? "Order placed — awaiting payment check"
+                : isCod
+                  ? "Order placed"
+                  : "Order Confirmed!"}
             </h1>
             <p className="text-[#8a8478] mb-1">Order number</p>
             <p className="text-lg font-medium text-amber-400 mb-6">
               {orderNumber}
             </p>
-            <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-4 leading-relaxed">
-              Thank you for shopping with Ajabu Lighting. We&apos;ll send you an email
-              confirmation and notify you when your order ships.
-            </p>
-            {isMomoManual && (
-              <p className="text-sm text-amber-400/90 max-w-md mx-auto mb-8 leading-relaxed">
-                We&apos;ve emailed you to confirm your payment notice. Your order
-                updates as soon as we verify the transfer.
+            {isMomoManual ? (
+              <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-8 leading-relaxed">
+                Thanks — we&apos;ve received your notice that you sent{" "}
+                <span className="text-[#f5f0e8]">{formatCurrency(amountDue)}</span>.
+                We&apos;ll check the transfer and email you as soon as your order
+                is confirmed.
+              </p>
+            ) : isCod ? (
+              <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-8 leading-relaxed">
+                Pay{" "}
+                <span className="text-[#f5f0e8]">{formatCurrency(amountDue)}</span>{" "}
+                in cash when your order is delivered. We&apos;ll email you when it
+                ships.
+              </p>
+            ) : (
+              <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-8 leading-relaxed">
+                Thank you for shopping with Ajabu Lighting. We&apos;ll send you an
+                email confirmation and notify you when your order ships.
               </p>
             )}
 
