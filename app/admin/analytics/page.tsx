@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency } from "@/lib/utils/format"
-import { ORDER_STATUS_LABELS, MOMO_PROVIDERS, COD_METHOD_VALUE } from "@/lib/utils/constants"
+import {
+  ORDER_STATUS_LABELS,
+  MOMO_PROVIDERS,
+  COD_METHOD_VALUE,
+  MOMO_MANUAL_VALUE,
+} from "@/lib/utils/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -109,27 +114,31 @@ export default async function AdminAnalyticsPage() {
 
   const momoValues = MOMO_PROVIDERS.map((p) => p.value) as string[]
   const collections = {
-    momo: { label: "MTN Mobile Money", total: 0, count: 0 },
-    cod: { label: "Cash on Delivery", total: 0, count: 0 },
-    other: { label: "Other / Manual", total: 0, count: 0 },
+    momo: { label: "MTN Mobile Money", total: 0, count: 0, color: "#f59e0b" },
+    transfer: { label: "MoMo Transfer", total: 0, count: 0, color: "#38bdf8" },
+    cod: { label: "Cash on Delivery", total: 0, count: 0, color: "#22c55e" },
+    other: { label: "Other / Manual", total: 0, count: 0, color: "#94a3b8" },
   }
   ;(successfulPayments ?? []).forEach((p) => {
     const amt = Number(p.amount)
     const method = (p.provider_metadata as { method?: string } | null)?.method
-    if (momoValues.includes(p.provider)) {
-      collections.momo.total += amt
-      collections.momo.count += 1
-    } else if (method === COD_METHOD_VALUE) {
-      collections.cod.total += amt
-      collections.cod.count += 1
-    } else {
-      collections.other.total += amt
-      collections.other.count += 1
-    }
+    const bucket = momoValues.includes(p.provider)
+      ? collections.momo
+      : method === MOMO_MANUAL_VALUE
+        ? collections.transfer
+        : method === COD_METHOD_VALUE
+          ? collections.cod
+          : collections.other
+    bucket.total += amt
+    bucket.count += 1
   })
-  const collectionsTotal =
-    collections.momo.total + collections.cod.total + collections.other.total
-  const collectionRows = [collections.momo, collections.cod, collections.other]
+  const collectionRows = [
+    collections.momo,
+    collections.transfer,
+    collections.cod,
+    collections.other,
+  ]
+  const collectionsTotal = collectionRows.reduce((s, r) => s + r.total, 0)
 
   // New customers this month vs last month
   const { count: customersThisMonth } = await supabase
@@ -164,10 +173,10 @@ export default async function AdminAnalyticsPage() {
       display: String(count),
     }))
   const paymentsCount = successfulPayments?.length ?? 0
-  const collectionsDonut: DonutDatum[] = collectionRows.map((row, i) => ({
+  const collectionsDonut: DonutDatum[] = collectionRows.map((row) => ({
     label: row.label,
     value: row.total,
-    color: ["#f59e0b", "#22c55e", "#94a3b8"][i],
+    color: row.color,
     display: formatCurrency(row.total),
   }))
 

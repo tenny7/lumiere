@@ -2,7 +2,12 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDateTime, formatPhone } from "@/lib/utils/format"
-import { PAYMENT_STATUS_LABELS, MOMO_PROVIDERS, COD_METHOD_VALUE } from "@/lib/utils/constants"
+import {
+  PAYMENT_STATUS_LABELS,
+  MOMO_PROVIDERS,
+  COD_METHOD_VALUE,
+  MOMO_MANUAL_VALUE,
+} from "@/lib/utils/constants"
 import { orderStatusLabel, orderStatusColorKey } from "@/lib/utils/order-display"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -97,20 +102,28 @@ export default async function OrderDetailPage({
     reason?: string | { code?: string; message?: string }
     status?: string
     manual?: boolean
+    momo_phone?: string | null
   }
   const isCodPayment = meta.method === COD_METHOD_VALUE
+  const isMomoTransfer = meta.method === MOMO_MANUAL_VALUE
   const financialTxnId = meta.financialTransactionId
   const failureReason =
     typeof meta.reason === "string"
       ? meta.reason
       : meta.reason?.message || meta.reason?.code || undefined
+  // Only MoMo API payments carry a gateway response; manual payments (COD,
+  // MoMo transfer) hold our own details instead.
   const hasMomoResponse =
-    Boolean(payment?.provider_metadata) && !meta.manual && !isCodPayment
+    Boolean(payment?.provider_metadata) &&
+    payment?.provider !== "manual" &&
+    !meta.manual
   const providerLabel = isCodPayment
     ? "Cash on Delivery"
-    : (MOMO_PROVIDERS.find((p) => p.value === payment?.provider)?.label ??
-      payment?.provider ??
-      "N/A")
+    : isMomoTransfer
+      ? "MoMo Transfer"
+      : (MOMO_PROVIDERS.find((p) => p.value === payment?.provider)?.label ??
+        payment?.provider ??
+        "N/A")
 
   // Admin can update from any non-terminal state (incl. pending, so orders can
   // be advanced manually while MoMo isn't fully wired up).
@@ -301,6 +314,12 @@ export default async function OrderDetailPage({
                       {PAYMENT_STATUS_LABELS[payment.status]}
                     </Badge>
                   </div>
+                  {isMomoTransfer && meta.momo_phone && (
+                    <div>
+                      <p className="text-muted-foreground">Sent from</p>
+                      <p className="font-medium font-mono">{meta.momo_phone}</p>
+                    </div>
+                  )}
                   {payment.phone_number && (
                     <div>
                       <p className="text-muted-foreground">Phone</p>
@@ -359,6 +378,16 @@ export default async function OrderDetailPage({
                     collected. Ask the customer to retry, or — if they were
                     charged — to contact MTN MoMo quoting the reference
                     {financialTxnId ? ` / transaction ID above` : " above"}.
+                  </div>
+                )}
+
+                {/* MoMo transfer awaiting verification — what to check. */}
+                {isMomoTransfer && payment.status === "pending" && (
+                  <div className="mt-4 rounded-md border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+                    The customer reports sending{" "}
+                    {formatCurrency(payment.amount, payment.currency)} by MoMo
+                    transfer{meta.momo_phone ? ` from ${meta.momo_phone}` : ""}.
+                    Check that it reached your MoMo account, then use Mark Paid.
                   </div>
                 )}
 

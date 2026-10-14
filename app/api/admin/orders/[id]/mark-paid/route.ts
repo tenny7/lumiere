@@ -43,7 +43,7 @@ export async function POST(
 
     const { data: payments } = await adminDb
       .from("payments")
-      .select("id, status")
+      .select("id, status, provider_metadata")
       .eq("order_id", id)
       .order("initiated_at", { ascending: false })
 
@@ -60,7 +60,14 @@ export async function POST(
         .update({
           status: "successful",
           completed_at: now,
-          provider_metadata: { manual: true, marked_by: user.id },
+          // Merge, keeping how the customer paid (method, momo_phone) for
+          // receipts and analytics; record who confirmed it.
+          provider_metadata: {
+            ...((latest.provider_metadata as Record<string, unknown> | null) ??
+              {}),
+            manual: true,
+            marked_by: user.id,
+          },
         })
         .eq("id", latest.id)
     } else {
