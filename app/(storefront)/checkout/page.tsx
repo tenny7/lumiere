@@ -93,20 +93,55 @@ export default function CheckoutPage() {
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "polling" | "success" | "failed">("idle")
   const [orderId, setOrderId] = useState("")
   const [orderNumber, setOrderNumber] = useState("")
+  const [orderTotal, setOrderTotal] = useState<number | null>(null)
 
   useEffect(() => {
     async function loadCart() {
-      const { data: { user } } = await supabase.auth.getUser()
+      // Local session read (no network hop). Every query below is RLS-scoped,
+      // and order creation re-validates the user server-side.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) {
         router.push("/login?redirect=/checkout")
         return
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, phone")
-        .eq("id", user.id)
-        .single()
+      // The four lookups are independent — fetch them in parallel instead of
+      // one after another (4 round trips → 1).
+      const [
+        { data: profile },
+        { data: addrs },
+        { data },
+        { data: settingsRows },
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("full_name, phone")
+          .eq("id", user.id)
+          .single(),
+        // Saved addresses — default to the user's default address, like Amazon.
+        supabase
+          .from("addresses")
+          .select("id, label, line_1, line_2, city, region, is_default")
+          .eq("profile_id", user.id)
+          .order("is_default", { ascending: false }),
+        supabase
+          .from("cart_items")
+          .select("id, quantity, product:products(name, base_price, sale_price, currency), variant:product_variants(name, price_adjustment)")
+          .eq("profile_id", user.id),
+        // Enabled payment methods + the manual MoMo transfer details. With no
+        // explicit setting, everything is available.
+        supabase
+          .from("store_settings")
+          .select("key, value")
+          .in("key", [
+            "active_payment_providers",
+            "momo_manual_number",
+            "momo_manual_name",
+          ]),
+      ])
 
       if (profile) {
         setFullName(profile.full_name)
@@ -116,40 +151,20 @@ export default function CheckoutPage() {
         }
       }
 
-      // Saved addresses — default to the user's default address, like Amazon.
-      const { data: addrs } = await supabase
-        .from("addresses")
-        .select("id, label, line_1, line_2, city, region, is_default")
-        .eq("profile_id", user.id)
-        .order("is_default", { ascending: false })
       if (addrs && addrs.length > 0) {
         setSavedAddresses(addrs)
         const def = addrs.find((a) => a.is_default) || addrs[0]
         chooseAddress(def)
       }
 
-      const { data } = await supabase
-        .from("cart_items")
-        .select("id, quantity, product:products(name, base_price, sale_price, currency), variant:product_variants(name, price_adjustment)")
-        .eq("profile_id", user.id)
-
       if (data && data.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setCartItems(data as any)
       } else {
         router.push("/cart")
+        return
       }
 
-      // Only show the payment methods the admin has enabled, and load the manual
-      // MoMo transfer details. With no explicit setting, everything is available.
-      const { data: settingsRows } = await supabase
-        .from("store_settings")
-        .select("key, value")
-        .in("key", [
-          "active_payment_providers",
-          "momo_manual_number",
-          "momo_manual_name",
-        ])
       const settingsMap: Record<string, unknown> = {}
       for (const r of settingsRows || []) settingsMap[r.key] = r.value
       const active = Array.isArray(settingsMap.active_payment_providers)
@@ -204,6 +219,17 @@ export default function CheckoutPage() {
   const discount = appliedCoupon?.discount ?? 0
   const deliveryFee = appliedCoupon?.freeShipping ? 0 : baseDelivery
   const total = Math.max(subtotal - discount, 0) + deliveryFee
+  // What the customer must pay: the server-computed order total once the order
+  // exists (the figure the admin verifies a transfer against), else the
+  // cart estimate.
+  const amountDue = orderTotal ?? total
+
+  function copyText(value: string, message: string) {
+    navigator.clipboard
+      ?.writeText(value)
+      .then(() => toast.success(message))
+      .catch(() => {})
+  }
 
   async function applyCoupon() {
     const code = couponInput.trim()
@@ -265,6 +291,7 @@ export default function CheckoutPage() {
 
       setOrderId(data.orderId)
       setOrderNumber(data.orderNumber)
+      setOrderTotal(Number(data.total))
       setStep("payment")
     } catch {
       toast.error("Network error. Please try again.")
@@ -663,10 +690,32 @@ export default function CheckoutPage() {
         {/* ═══ STEP 2: PAYMENT ═══ */}
         {step === "payment" && (
           <div>
-            <h1 className="font-serif text-2xl font-light mb-2">Payment</h1>
-            <p className="text-sm text-[#8a8478] mb-8">
-              Order {orderNumber} — {formatCurrency(total)}
-            </p>
+            <h1 className="font-serif text-2xl font-light mb-1">Payment</h1>
+            <p className="text-sm text-[#8a8478] mb-6">Order {orderNumber}</p>
+
+            {/* Amount due — the figure the customer acts on, so it leads */}
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border border-amber-500/30 bg-linear-to-br from-amber-500/8 to-transparent p-5 sm:p-6">
+              <div>
+                <p className="mb-2 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-amber-400">
+                  Amount to pay
+                </p>
+                <p className="font-serif text-4xl font-light leading-none tabular-nums text-[#f5f0e8] sm:text-5xl">
+                  {formatCurrency(amountDue)}
+                </p>
+              </div>
+              <div className="space-y-0.5 text-right text-xs text-[#8a8478] tabular-nums">
+                <p>Subtotal {formatCurrency(subtotal)}</p>
+                {discount > 0 && (
+                  <p className="text-green-400">
+                    Discount −{formatCurrency(discount)}
+                  </p>
+                )}
+                <p>
+                  Delivery{" "}
+                  {deliveryFee === 0 ? "Free" : formatCurrency(deliveryFee)}
+                </p>
+              </div>
+            </div>
 
             {paymentStatus === "idle" || paymentStatus === "failed" ? (
               <div className="space-y-6">
@@ -757,13 +806,32 @@ export default function CheckoutPage() {
                 {/* Manual MoMo transfer — show the store's number + steps */}
                 {isMomoManual && (
                   <div className="space-y-4">
-                    <div className="bg-[#1a1918] border border-amber-500/20 p-5 space-y-3">
-                      <p className="text-xs font-medium tracking-wider uppercase text-[#8a8478]">
-                        Send {formatCurrency(total)} via Mobile Money to
-                      </p>
-                      <div className="flex items-center justify-between gap-3">
+                    <div className="bg-[#1a1918] border border-amber-500/20 divide-y divide-white/5">
+                      <div className="flex items-center justify-between gap-3 p-5">
                         <div>
-                          <p className="text-lg font-medium text-[#f5f0e8] tracking-wide">
+                          <p className="mb-1 text-[0.65rem] font-medium uppercase tracking-[0.25em] text-[#8a8478]">
+                            Send exactly
+                          </p>
+                          <p className="font-serif text-3xl leading-tight tabular-nums text-amber-400">
+                            {formatCurrency(amountDue)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copyText(String(amountDue), "Amount copied")
+                          }
+                          className="shrink-0 px-3 py-2 border border-white/10 text-[0.65rem] uppercase tracking-wider hover:border-amber-500/50 transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 p-5">
+                        <div>
+                          <p className="mb-1 text-[0.65rem] font-medium uppercase tracking-[0.25em] text-[#8a8478]">
+                            To this MoMo number
+                          </p>
+                          <p className="text-xl font-medium tracking-wide tabular-nums text-[#f5f0e8]">
                             {momoManualNumber}
                           </p>
                           {momoManualName && (
@@ -774,21 +842,18 @@ export default function CheckoutPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            navigator.clipboard
-                              ?.writeText(momoManualNumber)
-                              .then(() => toast.success("Number copied"))
-                              .catch(() => {})
-                          }}
+                          onClick={() =>
+                            copyText(momoManualNumber, "Number copied")
+                          }
                           className="shrink-0 px-3 py-2 border border-white/10 text-[0.65rem] uppercase tracking-wider hover:border-amber-500/50 transition-colors"
                         >
                           Copy
                         </button>
                       </div>
-                      <ol className="text-xs text-[#8a8478] space-y-1 list-decimal list-inside pt-1">
+                      <ol className="p-5 text-xs text-[#8a8478] space-y-1 list-decimal list-inside">
                         <li>Open your Mobile Money app or dial the USSD code.</li>
                         <li>
-                          Send exactly {formatCurrency(total)} to the number
+                          Send exactly {formatCurrency(amountDue)} to the number
                           above.
                         </li>
                         <li>Use order {orderNumber} as the reference if asked.</li>
@@ -831,7 +896,7 @@ export default function CheckoutPage() {
                       onClick={handleCod}
                       className="w-full py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
                     >
-                      Place Order — Pay {formatCurrency(total)} on Delivery
+                      Place Order — Pay {formatCurrency(amountDue)} on Delivery
                     </button>
                     <p className="text-xs text-[#8a8478] text-center">
                       No payment now. Pay with cash when your order is delivered.
@@ -844,7 +909,7 @@ export default function CheckoutPage() {
                       disabled={!momoManualNumber}
                       className="w-full py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors disabled:opacity-50"
                     >
-                      I have paid — I&apos;ve sent {formatCurrency(total)}
+                      I have paid — I&apos;ve sent {formatCurrency(amountDue)}
                     </button>
                     <p className="text-xs text-[#8a8478] text-center">
                       We&apos;ll verify your transfer and confirm your order by
@@ -857,7 +922,7 @@ export default function CheckoutPage() {
                       onClick={handlePayment}
                       className="w-full py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
                     >
-                      Pay {formatCurrency(total)} with MoMo
+                      Pay {formatCurrency(amountDue)} with MoMo
                     </button>
                     <p className="text-xs text-[#8a8478] text-center">
                       You will receive a prompt on your phone to confirm payment
@@ -882,10 +947,14 @@ export default function CheckoutPage() {
                   <>
                     <Loader2 className="w-12 h-12 text-amber-400 mx-auto mb-4 animate-spin" />
                     <h2 className="font-serif text-xl mb-2">
-                      Waiting for payment
+                      {isCod || isMomoManual
+                        ? "Placing your order"
+                        : "Waiting for payment"}
                     </h2>
                     <p className="text-sm text-[#8a8478] mb-2">
-                      Check your phone for the MoMo prompt and enter your PIN
+                      {isCod || isMomoManual
+                        ? "One moment while we record your order"
+                        : "Check your phone for the MoMo prompt and enter your PIN"}
                     </p>
                     <p className="text-xs text-amber-400">
                       Do not close this page
