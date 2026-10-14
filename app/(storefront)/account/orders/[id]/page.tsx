@@ -327,6 +327,12 @@ export default async function OrderDetailPage({
                 </span>
               </div>
             )}
+            {order.tax_amount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8a8478]">VAT</span>
+                <span>{formatCurrency(order.tax_amount, currency)}</span>
+              </div>
+            )}
             <div className="border-t border-white/5 pt-3 mt-3 flex justify-between font-medium">
               <span>Total</span>
               <span>{formatCurrency(order.total, currency)}</span>

@@ -7,6 +7,13 @@ import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { formatCurrency } from "@/lib/utils/format"
 import {
+  computeOrderTotals,
+  parsePricingSettings,
+  PRICING_SETTING_KEYS,
+  type OrderTotals,
+  type PricingSettings,
+} from "@/lib/utils/pricing"
+import {
   MOMO_PROVIDERS,
   COD_METHOD,
   COD_METHOD_VALUE,
@@ -93,7 +100,15 @@ export default function CheckoutPage() {
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "polling" | "success" | "failed">("idle")
   const [orderId, setOrderId] = useState("")
   const [orderNumber, setOrderNumber] = useState("")
-  const [orderTotal, setOrderTotal] = useState<number | null>(null)
+  // Server-computed charges for the created order (what is actually owed).
+  const [orderBreakdown, setOrderBreakdown] = useState<OrderTotals | null>(null)
+  // Admin pricing (delivery fee, free-delivery threshold, VAT) for the estimate.
+  const [pricing, setPricing] = useState<PricingSettings>({
+    deliveryFee: 0,
+    freeShippingThreshold: 0,
+    taxRate: 0,
+  })
+  const [storeCurrency, setStoreCurrency] = useState("RWF")
 
   useEffect(() => {
     async function loadCart() {
@@ -140,6 +155,8 @@ export default function CheckoutPage() {
             "active_payment_providers",
             "momo_manual_number",
             "momo_manual_name",
+            "store_currency",
+            ...PRICING_SETTING_KEYS,
           ]),
       ])
 
@@ -167,6 +184,10 @@ export default function CheckoutPage() {
 
       const settingsMap: Record<string, unknown> = {}
       for (const r of settingsRows || []) settingsMap[r.key] = r.value
+      setPricing(parsePricingSettings(settingsRows))
+      if (typeof settingsMap.store_currency === "string" && settingsMap.store_currency) {
+        setStoreCurrency(settingsMap.store_currency.toUpperCase())
+      }
       const active = Array.isArray(settingsMap.active_payment_providers)
         ? (settingsMap.active_payment_providers as string[])
         : null
@@ -215,14 +236,21 @@ export default function CheckoutPage() {
     return sum + price * item.quantity
   }, 0)
 
-  const baseDelivery = subtotal >= 150 ? 0 : 25
-  const discount = appliedCoupon?.discount ?? 0
-  const deliveryFee = appliedCoupon?.freeShipping ? 0 : baseDelivery
-  const total = Math.max(subtotal - discount, 0) + deliveryFee
-  // What the customer must pay: the server-computed order total once the order
-  // exists (the figure the admin verifies a transfer against), else the
+  // Same calculation the server uses: delivery fee + free-delivery threshold +
+  // VAT from Admin → Settings, each added once.
+  const estimate = computeOrderTotals({
+    subtotal,
+    discount: appliedCoupon?.discount ?? 0,
+    couponFreeShipping: !!appliedCoupon?.freeShipping,
+    settings: pricing,
+    currency: storeCurrency,
+  })
+  const { discount, deliveryFee, taxAmount, total } = estimate
+  // Charges shown on the payment step: the server-computed figures once the
+  // order exists (what the admin verifies a transfer against), else the
   // cart estimate.
-  const amountDue = orderTotal ?? total
+  const shown = orderBreakdown ?? estimate
+  const amountDue = shown.total
 
   function copyText(value: string, message: string) {
     navigator.clipboard
@@ -291,7 +319,13 @@ export default function CheckoutPage() {
 
       setOrderId(data.orderId)
       setOrderNumber(data.orderNumber)
-      setOrderTotal(Number(data.total))
+      setOrderBreakdown({
+        subtotal: Number(data.subtotal),
+        discount: Number(data.discount),
+        deliveryFee: Number(data.deliveryFee),
+        taxAmount: Number(data.taxAmount),
+        total: Number(data.total),
+      })
       setStep("payment")
     } catch {
       toast.error("Network error. Please try again.")
@@ -669,6 +703,12 @@ export default function CheckoutPage() {
                       {deliveryFee === 0 ? "Free" : formatCurrency(deliveryFee)}
                     </span>
                   </div>
+                  {taxAmount > 0 && (
+                    <div className="flex justify-between text-sm text-[#8a8478]">
+                      <span>VAT ({pricing.taxRate}%)</span>
+                      <span>{formatCurrency(taxAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-medium pt-2 border-t border-white/5">
                     <span>Total</span>
                     <span>{formatCurrency(total)}</span>
@@ -704,16 +744,21 @@ export default function CheckoutPage() {
                 </p>
               </div>
               <div className="space-y-0.5 text-right text-xs text-[#8a8478] tabular-nums">
-                <p>Subtotal {formatCurrency(subtotal)}</p>
-                {discount > 0 && (
+                <p>Subtotal {formatCurrency(shown.subtotal)}</p>
+                {shown.discount > 0 && (
                   <p className="text-green-400">
-                    Discount −{formatCurrency(discount)}
+                    Discount −{formatCurrency(shown.discount)}
                   </p>
                 )}
                 <p>
                   Delivery{" "}
-                  {deliveryFee === 0 ? "Free" : formatCurrency(deliveryFee)}
+                  {shown.deliveryFee === 0
+                    ? "Free"
+                    : formatCurrency(shown.deliveryFee)}
                 </p>
+                {shown.taxAmount > 0 && (
+                  <p>VAT {formatCurrency(shown.taxAmount)}</p>
+                )}
               </div>
             </div>
 

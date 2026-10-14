@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const { data: order } = await adminDb
       .from("orders")
       .select(
-        "id, order_number, customer_id, total, currency, shipping_address, profiles(email, full_name)",
+        "id, order_number, customer_id, subtotal, discount_amount, delivery_fee, tax_amount, total, currency, shipping_address, profiles(email, full_name)",
       )
       .eq("order_number", externalId)
       .single()
@@ -145,8 +145,10 @@ export async function POST(request: NextRequest) {
             total: i.total_price,
           }))
 
-          const subtotal = items.reduce((s, i) => s + i.total, 0)
-          const deliveryFee = Number(order.total) - subtotal
+          // Use the charges stored on the order (deriving delivery as
+          // total − items would fold VAT and discounts into it).
+          const subtotal = Number(order.subtotal)
+          const deliveryFee = Number(order.delivery_fee) || 0
 
           // Shipping address is stored as JSONB on the order
           const address = (order.shipping_address || {}) as {
@@ -161,7 +163,9 @@ export async function POST(request: NextRequest) {
               orderNumber: order.order_number,
               items,
               subtotal,
-              deliveryFee: deliveryFee > 0 ? deliveryFee : 0,
+              discount: Number(order.discount_amount) || 0,
+              deliveryFee,
+              tax: Number(order.tax_amount) || 0,
               total: Number(order.total),
               shippingAddress: {
                 fullName: address.full_name || profile.full_name || "",

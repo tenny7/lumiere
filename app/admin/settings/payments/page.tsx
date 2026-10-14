@@ -30,6 +30,10 @@ function parseProviders(value: unknown): string[] | null {
 const FIELDS = [
   { key: "delivery_fee", label: "Standard Delivery Fee (RWF)" },
   { key: "free_shipping_threshold", label: "Free Shipping Threshold (RWF)" },
+  {
+    key: "store_tax_rate",
+    label: "VAT Rate (%) — added on top of the goods total, e.g. 18",
+  },
 ] as const
 
 // Text settings for the manual MoMo transfer method (shown to customers at

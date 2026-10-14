@@ -3,6 +3,10 @@
  * Next.js 16 disallows react-dom/server in API routes.
  */
 
+import { formatCurrency } from "@/lib/utils/format"
+
+const money = (amount: number) => formatCurrency(amount, "RWF")
+
 interface OrderItem {
   name: string
   quantity: number
@@ -22,11 +26,23 @@ export function renderOrderConfirmationEmail(props: {
   orderNumber: string
   items: OrderItem[]
   subtotal: number
+  discount?: number
   deliveryFee: number
+  tax?: number
   total: number
   shippingAddress: ShippingAddress
 }): string {
-  const { customerName, orderNumber, items, subtotal, deliveryFee, total, shippingAddress } = props
+  const {
+    customerName,
+    orderNumber,
+    items,
+    subtotal,
+    discount = 0,
+    deliveryFee,
+    tax = 0,
+    total,
+    shippingAddress,
+  } = props
   const orderDate = new Date().toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -39,7 +55,7 @@ export function renderOrderConfirmationEmail(props: {
     <tr>
       <td style="font-size:14px;color:#f5f0e8;padding:12px 0;border-bottom:1px solid #1e1e1a">${escapeHtml(item.name)}</td>
       <td style="font-size:14px;color:#a8a294;text-align:center;padding:12px 0;border-bottom:1px solid #1e1e1a">${item.quantity}</td>
-      <td style="font-size:14px;color:#f5f0e8;text-align:right;padding:12px 0;border-bottom:1px solid #1e1e1a">RWF ${item.total.toFixed(2)}</td>
+      <td style="font-size:14px;color:#f5f0e8;text-align:right;padding:12px 0;border-bottom:1px solid #1e1e1a">${money(item.total)}</td>
     </tr>`,
     )
     .join("")
@@ -81,15 +97,31 @@ export function renderOrderConfirmationEmail(props: {
     <div style="margin-bottom:32px">
       <div style="display:flex;justify-content:space-between;padding:6px 0">
         <span style="font-size:14px;color:#a8a294">Subtotal</span>
-        <span style="font-size:14px;color:#f5f0e8">RWF ${subtotal.toFixed(2)}</span>
-      </div>
+        <span style="font-size:14px;color:#f5f0e8">${money(subtotal)}</span>
+      </div>${
+        discount > 0
+          ? `
+      <div style="display:flex;justify-content:space-between;padding:6px 0">
+        <span style="font-size:14px;color:#a8a294">Discount</span>
+        <span style="font-size:14px;color:#f5f0e8">-${money(discount)}</span>
+      </div>`
+          : ""
+      }
       <div style="display:flex;justify-content:space-between;padding:6px 0">
         <span style="font-size:14px;color:#a8a294">Delivery</span>
-        <span style="font-size:14px;color:#f5f0e8">RWF ${deliveryFee.toFixed(2)}</span>
-      </div>
+        <span style="font-size:14px;color:#f5f0e8">${deliveryFee > 0 ? money(deliveryFee) : "Free"}</span>
+      </div>${
+        tax > 0
+          ? `
+      <div style="display:flex;justify-content:space-between;padding:6px 0">
+        <span style="font-size:14px;color:#a8a294">VAT</span>
+        <span style="font-size:14px;color:#f5f0e8">${money(tax)}</span>
+      </div>`
+          : ""
+      }
       <div style="display:flex;justify-content:space-between;padding:10px 0 0 0;border-top:1px solid #2a2a24;margin-top:6px">
         <span style="font-size:16px;font-weight:600;color:#f5f0e8">Total</span>
-        <span style="font-size:16px;font-weight:600;color:#c9a96e">RWF ${total.toFixed(2)}</span>
+        <span style="font-size:16px;font-weight:600;color:#c9a96e">${money(total)}</span>
       </div>
     </div>
     <div style="background-color:#1a1a16;border-radius:6px;padding:20px;margin-bottom:32px">

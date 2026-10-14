@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { evaluateCoupon, type CouponRow } from "@/lib/utils/coupon"
-import { getStoreCurrency } from "@/lib/utils/settings"
+import { getStoreCurrency, getPricingSettings } from "@/lib/utils/settings"
+import { computeOrderTotals } from "@/lib/utils/pricing"
 import { normalizeInternationalPhone } from "@/lib/utils/phone"
 import { z } from "zod"
 
@@ -126,10 +127,18 @@ export async function POST(request: NextRequest) {
       couponId = coupon!.id
     }
 
-    const baseDelivery = subtotal >= 150 ? 0 : 25
-    const deliveryFee = freeShipping ? 0 : baseDelivery
-    const total = Math.max(subtotal - discountAmount, 0) + deliveryFee
-    const currency = await getStoreCurrency()
+    // Delivery fee, free-delivery threshold and VAT come from Admin → Settings.
+    const [currency, pricing] = await Promise.all([
+      getStoreCurrency(),
+      getPricingSettings(),
+    ])
+    const { deliveryFee, taxAmount, total } = computeOrderTotals({
+      subtotal,
+      discount: discountAmount,
+      couponFreeShipping: freeShipping,
+      settings: pricing,
+      currency,
+    })
 
     // Create order with server-calculated total
     const { data: order, error: orderError } = await adminDb
@@ -139,6 +148,7 @@ export async function POST(request: NextRequest) {
         subtotal,
         discount_amount: discountAmount,
         delivery_fee: deliveryFee,
+        tax_amount: taxAmount,
         total,
         currency,
         coupon_id: couponId,
@@ -219,6 +229,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       orderId: order.id,
       orderNumber: order.order_number,
+      subtotal,
+      discount: discountAmount,
+      deliveryFee,
+      taxAmount,
       total,
     })
   } catch (error) {

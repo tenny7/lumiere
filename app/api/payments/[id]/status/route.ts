@@ -26,7 +26,7 @@ export async function GET(
     const { data: payment, error } = await adminDb
       .from("payments")
       .select(
-        "*, orders(customer_id, order_number, total, currency, status, shipping_address)",
+        "*, orders(customer_id, order_number, subtotal, discount_amount, delivery_fee, tax_amount, total, currency, status, shipping_address)",
       )
       .eq("id", id)
       .single()
@@ -134,9 +134,11 @@ export async function GET(
           total: i.total_price,
         }))
 
-        const subtotal = items.reduce((s, i) => s + i.total, 0)
+        // Use the charges stored on the order (deriving delivery as
+        // total − items would fold VAT and discounts into it).
+        const subtotal = Number(payment.orders.subtotal)
         const orderTotal = Number(payment.orders.total)
-        const deliveryFee = orderTotal - subtotal
+        const deliveryFee = Number(payment.orders.delivery_fee) || 0
 
         // Shipping address is stored as JSONB on the order
         const address = (payment.orders.shipping_address || {}) as {
@@ -151,7 +153,9 @@ export async function GET(
             orderNumber: payment.orders.order_number,
             items,
             subtotal,
-            deliveryFee: deliveryFee > 0 ? deliveryFee : 0,
+            discount: Number(payment.orders.discount_amount) || 0,
+            deliveryFee,
+            tax: Number(payment.orders.tax_amount) || 0,
             total: orderTotal,
             shippingAddress: {
               fullName: address.full_name || userProfile?.full_name || "",
