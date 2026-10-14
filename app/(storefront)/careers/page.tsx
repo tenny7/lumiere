@@ -1,3 +1,5 @@
+import { STORE_EMAIL } from "@/lib/utils/constants"
+
 export default function CareersPage() {
   return (
     <div className="pt-24 pb-16">
@@ -14,7 +16,7 @@ export default function CareersPage() {
           customer experiences, we&apos;d love to hear from you.
         </p>
         <p className="text-sm text-[#8a8478]">
-          No open positions at the moment. Send your CV to careers@ajabulighting.com
+          No open positions at the moment. Send your CV to {STORE_EMAIL}
           and we&apos;ll keep it on file.
         </p>
       </div>

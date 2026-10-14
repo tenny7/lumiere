@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer"
+import { STORE_EMAIL } from "@/lib/utils/constants"
 
 // SMTP transport (Gmail by default). For Gmail you must use an "App Password"
 // (Google Account → Security → 2-Step Verification → App passwords), not your
@@ -8,12 +9,13 @@ const port = Number(process.env.SMTP_PORT || 465)
 const user = process.env.GMAIL_USER || process.env.SMTP_USER
 const pass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASSWORD
 
-// Gmail rewrites/rejects arbitrary "From" addresses, so the From must be the
-// authenticated account (or a verified alias). Default it to the SMTP user.
+// Send from the store's business address. Gmail keeps this From only when the
+// SMTP account above has it verified under Settings → Accounts → "Send mail
+// as"; otherwise Gmail rewrites From to the account's own address. Replies go
+// to STORE_EMAIL either way.
 export const EMAIL_FROM =
-  process.env.EMAIL_FROM || (user ? `Ajabu Lighting <${user}>` : "Ajabu Lighting <no-reply@ajabulighting.com>")
-export const EMAIL_REPLY_TO =
-  process.env.EMAIL_REPLY_TO || user || "support@ajabulighting.com"
+  process.env.EMAIL_FROM || `Ajabu Lighting <${STORE_EMAIL}>`
+export const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || STORE_EMAIL
 
 let transporter: nodemailer.Transporter | null = null
 

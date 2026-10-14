@@ -1,3 +1,7 @@
+// The store's public email address. Cloudflare Email Routing forwards it to
+// the store's Gmail; it's also the From/Reply-To of the store's own emails.
+export const STORE_EMAIL = "info@ajabulighting.com"
+
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   confirmed: "Confirmed",

@@ -1,3 +1,5 @@
+import { STORE_EMAIL } from "@/lib/utils/constants"
+
 export default function PrivacyPage() {
   return (
     <div className="pt-24 pb-16">
@@ -18,7 +20,7 @@ export default function PrivacyPage() {
           </section>
           <section>
             <h2 className="font-serif text-xl text-[#f5f0e8] mb-3">Contact</h2>
-            <p>For privacy inquiries, contact us at privacy@ajabulighting.com.</p>
+            <p>For privacy inquiries, contact us at {STORE_EMAIL}.</p>
           </section>
         </div>
       </div>
