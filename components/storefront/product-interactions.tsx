@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { notifyWishlistUpdated } from "@/hooks/use-wishlist-count"
 import { formatCurrency } from "@/lib/utils/format"
+import { removeFromWishlist } from "@/lib/utils/cart"
 import { toast } from "sonner"
 
 interface Variant {
@@ -89,6 +90,11 @@ export function ProductInteractions({
       toast.error("Failed to add to cart")
     } else {
       notifyCartUpdated()
+      // Items in the cart come off the wishlist.
+      if (await removeFromWishlist(supabase, user.id, productId)) {
+        setWishlisted(false)
+        notifyWishlistUpdated()
+      }
       toast.success("Added to cart", {
         action: { label: "View cart", onClick: () => router.push("/cart") },
       })

@@ -6,6 +6,7 @@ import { ShoppingBag, Heart, Check, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { notifyWishlistUpdated } from "@/hooks/use-wishlist-count"
+import { removeFromWishlist } from "@/lib/utils/cart"
 import { toast } from "sonner"
 
 const CART_KEY = "lumiere_cart"
@@ -68,6 +69,11 @@ export function ProductCardActions({
     } else {
       notifyCartUpdated()
       setInCart(true)
+      // Items in the cart come off the wishlist.
+      if (await removeFromWishlist(supabase, user.id, productId)) {
+        setSaved(false)
+        notifyWishlistUpdated()
+      }
       toast.success("Added to cart", {
         action: { label: "View cart", onClick: () => router.push("/cart") },
       })
