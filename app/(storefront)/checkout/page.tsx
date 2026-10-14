@@ -6,8 +6,14 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { formatCurrency } from "@/lib/utils/format"
-import { MOMO_PROVIDERS, COD_METHOD, COD_METHOD_VALUE } from "@/lib/utils/constants"
-import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus, Banknote } from "lucide-react"
+import {
+  MOMO_PROVIDERS,
+  COD_METHOD,
+  COD_METHOD_VALUE,
+  MOMO_MANUAL_METHOD,
+  MOMO_MANUAL_VALUE,
+} from "@/lib/utils/constants"
+import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus, Banknote, Smartphone } from "lucide-react"
 import { toast } from "sonner"
 
 type Step = "shipping" | "payment" | "confirmation"
@@ -78,7 +84,11 @@ export default function CheckoutPage() {
   >([...MOMO_PROVIDERS])
   const [provider, setProvider] = useState<string>("momo_mtn")
   const [codEnabled, setCodEnabled] = useState(true)
+  const [momoManualEnabled, setMomoManualEnabled] = useState(true)
+  const [momoManualNumber, setMomoManualNumber] = useState("")
+  const [momoManualName, setMomoManualName] = useState("")
   const isCod = provider === COD_METHOD_VALUE
+  const isMomoManual = provider === MOMO_MANUAL_VALUE
   const [momoPhone, setMomoPhone] = useState("")
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "polling" | "success" | "failed">("idle")
   const [orderId, setOrderId] = useState("")
@@ -130,21 +140,47 @@ export default function CheckoutPage() {
         router.push("/cart")
       }
 
-      // Only show the payment methods the admin has enabled. With no explicit
-      // setting, everything (MoMo providers + Cash on Delivery) is available.
-      const { data: apRow } = await supabase
+      // Only show the payment methods the admin has enabled, and load the manual
+      // MoMo transfer details. With no explicit setting, everything is available.
+      const { data: settingsRows } = await supabase
         .from("store_settings")
-        .select("value")
-        .eq("key", "active_payment_providers")
-        .maybeSingle()
-      const active = Array.isArray(apRow?.value) ? (apRow.value as string[]) : null
+        .select("key, value")
+        .in("key", [
+          "active_payment_providers",
+          "momo_manual_number",
+          "momo_manual_name",
+        ])
+      const settingsMap: Record<string, unknown> = {}
+      for (const r of settingsRows || []) settingsMap[r.key] = r.value
+      const active = Array.isArray(settingsMap.active_payment_providers)
+        ? (settingsMap.active_payment_providers as string[])
+        : null
+      const manualNumber =
+        typeof settingsMap.momo_manual_number === "string"
+          ? settingsMap.momo_manual_number
+          : ""
+      const manualName =
+        typeof settingsMap.momo_manual_name === "string"
+          ? settingsMap.momo_manual_name
+          : ""
+      setMomoManualNumber(manualNumber)
+      setMomoManualName(manualName)
+
       const codOn = !active || active.includes(COD_METHOD_VALUE)
+      // Manual transfer needs a configured number to be usable.
+      const momoManualOn =
+        (!active || active.includes(MOMO_MANUAL_VALUE)) && !!manualNumber
       setCodEnabled(codOn)
+      setMomoManualEnabled(momoManualOn)
       const filteredMomo = active
         ? MOMO_PROVIDERS.filter((p) => active.includes(p.value))
         : [...MOMO_PROVIDERS]
       setAvailableProviders(filteredMomo)
-      if (filteredMomo.length > 0) {
+      // Default to MoMo transfer when available (the primary method), then the
+      // API MoMo providers, then Cash on Delivery.
+      if (momoManualOn) {
+        setProvider(MOMO_MANUAL_VALUE)
+      } else if (filteredMomo.length > 0) {
         setProvider(filteredMomo[0].value)
       } else if (codOn) {
         setProvider(COD_METHOD_VALUE)
@@ -321,6 +357,37 @@ export default function CheckoutPage() {
       }
 
       // Clear the cart, matching the MoMo success path.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from("cart_items").delete().eq("profile_id", user.id)
+      }
+      notifyCartUpdated()
+      setPaymentStatus("success")
+      setStep("confirmation")
+    } catch {
+      toast.error("Network error. Please try again.")
+      setPaymentStatus("failed")
+    }
+  }
+
+  async function handleMomoManual() {
+    setPaymentStatus("pending")
+    try {
+      const res = await fetch("/api/payments/momo-manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, momoPhone }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || "Couldn't record your payment")
+        setPaymentStatus("failed")
+        return
+      }
+
+      // Clear the cart, matching the other success paths.
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -628,6 +695,24 @@ export default function CheckoutPage() {
                         </span>
                       </button>
                     ))}
+                    {momoManualEnabled && (
+                      <button
+                        onClick={() => setProvider(MOMO_MANUAL_VALUE)}
+                        className={`p-4 border text-center transition-colors ${
+                          isMomoManual
+                            ? "border-amber-500 bg-amber-500/5"
+                            : "border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <Smartphone
+                          className="w-4 h-4 mx-auto mb-1.5"
+                          style={{ color: MOMO_MANUAL_METHOD.color }}
+                        />
+                        <span className="text-[0.65rem] leading-tight block">
+                          {MOMO_MANUAL_METHOD.label}
+                        </span>
+                      </button>
+                    )}
                     {codEnabled && (
                       <button
                         onClick={() => setProvider(COD_METHOD_VALUE)}
@@ -649,8 +734,8 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Phone Number (MoMo only) */}
-                {!isCod && (
+                {/* Phone Number (API MoMo only) */}
+                {!isCod && !isMomoManual && (
                   <div>
                     <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
                       MoMo Phone Number
@@ -665,6 +750,68 @@ export default function CheckoutPage() {
                         required
                         className="w-full pl-10 pr-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual MoMo transfer — show the store's number + steps */}
+                {isMomoManual && (
+                  <div className="space-y-4">
+                    <div className="bg-[#1a1918] border border-amber-500/20 p-5 space-y-3">
+                      <p className="text-xs font-medium tracking-wider uppercase text-[#8a8478]">
+                        Send {formatCurrency(total)} via Mobile Money to
+                      </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-lg font-medium text-[#f5f0e8] tracking-wide">
+                            {momoManualNumber}
+                          </p>
+                          {momoManualName && (
+                            <p className="text-sm text-[#8a8478]">
+                              {momoManualName}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard
+                              ?.writeText(momoManualNumber)
+                              .then(() => toast.success("Number copied"))
+                              .catch(() => {})
+                          }}
+                          className="shrink-0 px-3 py-2 border border-white/10 text-[0.65rem] uppercase tracking-wider hover:border-amber-500/50 transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <ol className="text-xs text-[#8a8478] space-y-1 list-decimal list-inside pt-1">
+                        <li>Open your Mobile Money app or dial the USSD code.</li>
+                        <li>
+                          Send exactly {formatCurrency(total)} to the number
+                          above.
+                        </li>
+                        <li>Use order {orderNumber} as the reference if asked.</li>
+                        <li>Tap &ldquo;I have paid&rdquo; once it&apos;s done.</li>
+                      </ol>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                        Number you sent from (optional)
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8a8478]" />
+                        <input
+                          type="tel"
+                          value={momoPhone}
+                          onChange={(e) => setMomoPhone(e.target.value)}
+                          placeholder="+250 781 234 567"
+                          className="w-full pl-10 pr-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
+                        />
+                      </div>
+                      <p className="text-xs text-[#8a8478] mt-1.5">
+                        Helps us match your transfer faster.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -688,6 +835,20 @@ export default function CheckoutPage() {
                     </button>
                     <p className="text-xs text-[#8a8478] text-center">
                       No payment now. Pay with cash when your order is delivered.
+                    </p>
+                  </>
+                ) : isMomoManual ? (
+                  <>
+                    <button
+                      onClick={handleMomoManual}
+                      disabled={!momoManualNumber}
+                      className="w-full py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors disabled:opacity-50"
+                    >
+                      I have paid — I&apos;ve sent {formatCurrency(total)}
+                    </button>
+                    <p className="text-xs text-[#8a8478] text-center">
+                      We&apos;ll verify your transfer and confirm your order by
+                      email.
                     </p>
                   </>
                 ) : (
@@ -747,10 +908,16 @@ export default function CheckoutPage() {
             <p className="text-lg font-medium text-amber-400 mb-6">
               {orderNumber}
             </p>
-            <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-8 leading-relaxed">
+            <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-4 leading-relaxed">
               Thank you for shopping with Ajabu Lighting. We&apos;ll send you an email
               confirmation and notify you when your order ships.
             </p>
+            {isMomoManual && (
+              <p className="text-sm text-amber-400/90 max-w-md mx-auto mb-8 leading-relaxed">
+                We&apos;ve emailed you to confirm your payment notice. Your order
+                updates as soon as we verify the transfer.
+              </p>
+            )}
 
             <div className="bg-[#1a1918] border border-white/[0.03] p-5 max-w-sm mx-auto text-left mb-8">
               <div className="flex items-start gap-3 mb-4">
@@ -777,6 +944,16 @@ export default function CheckoutPage() {
               >
                 View Orders
               </Link>
+              {orderId && (
+                <a
+                  href={`/invoice/${orderId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-8 py-3 border border-white/10 text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 transition-colors"
+                >
+                  View Receipt
+                </a>
+              )}
               <Link
                 href="/products"
                 className="px-8 py-3 border border-white/10 text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 transition-colors"

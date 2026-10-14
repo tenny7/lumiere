@@ -63,6 +63,27 @@ export async function notifyAdminsNewOrder(o: {
   )
 }
 
+export async function notifyAdminsManualMomo(o: {
+  id: string
+  order_number: string
+  total: number
+  currency: string
+  customerName?: string | null
+  momoPhone?: string | null
+}) {
+  await notifyAdmins(
+    `Verify MoMo transfer — ${o.order_number}`,
+    `
+    <h2 style="font-weight:600">Customer reports a MoMo transfer</h2>
+    <p>Order <strong>${esc(o.order_number)}</strong> &middot; ${esc(o.customerName || "—")}</p>
+    <p>Amount to confirm: <strong>${esc(o.currency)} ${esc(Number(o.total).toLocaleString())}</strong></p>
+    ${o.momoPhone ? `<p>Sent from: <strong>${esc(o.momoPhone)}</strong></p>` : ""}
+    <p style="margin-top:12px">Please confirm the money has landed, then mark the order paid.</p>
+    <p style="margin-top:16px"><a href="${APP_URL}/admin/orders/${o.id}" style="color:#b45309">Open order &amp; mark paid &rarr;</a></p>
+  `,
+  )
+}
+
 export async function notifyAdminsNewMessage(m: {
   orderId: string
   orderNumber: string

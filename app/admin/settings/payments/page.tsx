@@ -32,6 +32,21 @@ const FIELDS = [
   { key: "free_shipping_threshold", label: "Free Shipping Threshold (RWF)" },
 ] as const
 
+// Text settings for the manual MoMo transfer method (shown to customers at
+// checkout when "MoMo Transfer" is active).
+const TEXT_FIELDS = [
+  {
+    key: "momo_manual_number",
+    label: "MoMo Number (for manual transfers)",
+    placeholder: "+250 78X XXX XXX",
+  },
+  {
+    key: "momo_manual_name",
+    label: "MoMo Account Name",
+    placeholder: "Ajabu Lighting",
+  },
+] as const
+
 export default function PaymentSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [original, setOriginal] = useState<Record<string, string>>({})
@@ -82,7 +97,7 @@ export default function PaymentSettingsPage() {
   async function handleSave() {
     setSaving(true)
     const supabase = createClient()
-    const upserts = FIELDS.map((f) => ({
+    const upserts = [...FIELDS, ...TEXT_FIELDS].map((f) => ({
       key: f.key,
       value: settings[f.key] ?? "",
     }))
@@ -98,7 +113,9 @@ export default function PaymentSettingsPage() {
     setSaving(false)
   }
 
-  const hasChanges = FIELDS.some((f) => settings[f.key] !== original[f.key])
+  const hasChanges = [...FIELDS, ...TEXT_FIELDS].some(
+    (f) => settings[f.key] !== original[f.key],
+  )
 
   return (
     <div className="space-y-6">
@@ -113,7 +130,7 @@ export default function PaymentSettingsPage() {
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-base">Delivery & Fees</CardTitle>
+          <CardTitle className="text-base">Delivery & Payment Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
@@ -136,6 +153,30 @@ export default function PaymentSettingsPage() {
                   />
                 </div>
               ))}
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground mb-3">
+                  MoMo Transfer — the number customers send to when they pay by
+                  manual Mobile Money transfer. Leave the number blank to hide
+                  that method.
+                </p>
+                {TEXT_FIELDS.map((field) => (
+                  <div key={field.key} className="space-y-2 mb-4">
+                    <Label htmlFor={field.key}>{field.label}</Label>
+                    <Input
+                      id={field.key}
+                      type="text"
+                      placeholder={field.placeholder}
+                      value={settings[field.key] ?? ""}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
               <Button onClick={handleSave} disabled={!hasChanges || saving}>
                 <Save className="w-4 h-4 mr-2" />
                 {saving ? "Saving..." : "Save Settings"}

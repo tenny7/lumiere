@@ -22,6 +22,18 @@ export const MOMO_PROVIDERS = [
   { value: "momo_airteltigo", label: "AirtelTigo Money", color: "#ff3333" },
 ] as const
 
+// Manual MoMo transfer. No gateway/API: the customer sends money to the store's
+// published MoMo number, taps "I have paid", and the order is placed unpaid
+// (status pending). Admin verifies the transfer and marks it paid. Recorded
+// against the existing `manual` payment_provider with metadata
+// { method: MOMO_MANUAL_VALUE }, so no new DB enum value is required.
+export const MOMO_MANUAL_VALUE = "momo_manual"
+export const MOMO_MANUAL_METHOD = {
+  value: MOMO_MANUAL_VALUE,
+  label: "MoMo Transfer",
+  color: "#f59e0b",
+} as const
+
 // Cash on Delivery. Not a real gateway — the order is placed unpaid and the
 // admin marks it paid once cash is collected on delivery. Recorded against the
 // existing `manual` payment_provider with metadata { method: COD_METHOD_VALUE },
@@ -34,7 +46,11 @@ export const COD_METHOD = {
 } as const
 
 // Every payment method a customer can pick at checkout / an admin can toggle.
-export const PAYMENT_METHODS = [...MOMO_PROVIDERS, COD_METHOD] as const
+export const PAYMENT_METHODS = [
+  ...MOMO_PROVIDERS,
+  MOMO_MANUAL_METHOD,
+  COD_METHOD,
+] as const
 
 export const CRM_CONTACT_STATUS_LABELS: Record<string, string> = {
   lead: "Lead",
