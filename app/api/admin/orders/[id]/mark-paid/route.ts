@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { sendOrderConfirmationEmail } from "@/lib/mail/order-confirmation"
+import { COD_METHOD_VALUE } from "@/lib/utils/constants"
 
 /**
  * Admin-only: manually mark an order as paid. Mirrors the real payment-success
@@ -108,6 +110,16 @@ export async function POST(
 
     // Clear the customer's cart, matching the real payment-success path.
     await adminDb.from("cart_items").delete().eq("profile_id", order.customer_id)
+
+    // Tell the customer their order is confirmed (e.g. a verified MoMo
+    // transfer). Skipped for Cash on Delivery: those are marked paid on
+    // handover, when "your order is being prepared" would be wrong.
+    const method = (
+      latest?.provider_metadata as { method?: string } | null | undefined
+    )?.method
+    if (method !== COD_METHOD_VALUE) {
+      await sendOrderConfirmationEmail(id)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
