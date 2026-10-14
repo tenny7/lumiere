@@ -1086,7 +1086,8 @@ export default function CheckoutPage() {
                   rel="noopener noreferrer"
                   className="px-8 py-3 border border-white/10 text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 transition-colors"
                 >
-                  View Receipt
+                  {/* Only a completed MoMo (API) payment has a receipt yet. */}
+                  {isCod || isMomoManual ? "View Invoice" : "View Receipt"}
                 </a>
               )}
               <Link

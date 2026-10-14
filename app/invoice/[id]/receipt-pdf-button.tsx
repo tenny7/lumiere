@@ -9,9 +9,16 @@ export type ReceiptData = {
   storeEmail: string
   storePhone: string
   storeAddress: string
+  /** "receipt" only once payment was received; otherwise "invoice". */
+  docType: "receipt" | "invoice"
+  /** e.g. "Paid", "Payment pending", "Cancelled". */
+  statusLabel: string
+  paidOn: string | null
+  paidVia: string
+  /** "Total paid" / "Amount due" / "Total". */
+  totalLabel: string
   orderNumber: string
   createdAt: string
-  status: string
   currency: string
   billToName: string
   billToEmail: string
@@ -35,6 +42,8 @@ const AMBER: [number, number, number] = [245, 158, 11]
 const INK: [number, number, number] = [26, 26, 26]
 const GREY: [number, number, number] = [120, 120, 120]
 const LINE: [number, number, number] = [220, 220, 220]
+const PAID: [number, number, number] = [4, 120, 87]
+const PENDING: [number, number, number] = [180, 83, 9]
 
 export function ReceiptPdfButton({ data }: { data: ReceiptData }) {
   const [busy, setBusy] = useState(false)
@@ -69,8 +78,9 @@ export function ReceiptPdfButton({ data }: { data: ReceiptData }) {
       // Receipt meta (right)
       doc.setFont("helvetica", "bold")
       doc.setFontSize(9)
+      const isReceipt = data.docType === "receipt"
       doc.setTextColor(...AMBER)
-      doc.text("RECEIPT", R, y - 4, { align: "right" })
+      doc.text(isReceipt ? "RECEIPT" : "INVOICE", R, y - 4, { align: "right" })
       doc.setTextColor(...INK)
       doc.setFontSize(12)
       doc.text(data.orderNumber, R, y + 1, { align: "right" })
@@ -78,7 +88,10 @@ export function ReceiptPdfButton({ data }: { data: ReceiptData }) {
       doc.setFontSize(9)
       doc.setTextColor(...GREY)
       doc.text(formatDate(data.createdAt), R, y + 6, { align: "right" })
-      doc.text(`Status: ${data.status}`, R, y + 10.5, { align: "right" })
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(...(isReceipt ? PAID : PENDING))
+      doc.text(data.statusLabel.toUpperCase(), R, y + 10.5, { align: "right" })
+      doc.setFont("helvetica", "normal")
 
       y = Math.max(sy, y + 14) + 6
 
@@ -179,8 +192,31 @@ export function ReceiptPdfButton({ data }: { data: ReceiptData }) {
       doc.setFont("helvetica", "bold")
       doc.setFontSize(11)
       doc.setTextColor(...INK)
-      doc.text("Total", tx, y)
+      doc.text(data.totalLabel, tx, y)
       doc.text(formatCurrency(data.total, cur), R, y, { align: "right" })
+
+      // Payment line: when and how it was paid, or that it isn't paid yet.
+      y += 12
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      if (isReceipt) {
+        doc.setTextColor(...PAID)
+        doc.text(
+          `Paid${data.paidOn ? ` on ${formatDate(data.paidOn)}` : ""}${
+            data.paidVia ? ` via ${data.paidVia}` : ""
+          }.`,
+          L,
+          y,
+        )
+      } else if (data.statusLabel === "Payment pending") {
+        doc.setTextColor(...PENDING)
+        doc.text(
+          "Payment pending. This invoice is not proof of payment; a receipt is issued once payment is confirmed.",
+          L,
+          y,
+          { maxWidth: R - L },
+        )
+      }
 
       // Footer
       y += 16
@@ -195,7 +231,7 @@ export function ReceiptPdfButton({ data }: { data: ReceiptData }) {
         })
       }
 
-      doc.save(`receipt-${data.orderNumber}.pdf`)
+      doc.save(`${data.docType}-${data.orderNumber}.pdf`)
     } finally {
       setBusy(false)
     }
@@ -208,7 +244,11 @@ export function ReceiptPdfButton({ data }: { data: ReceiptData }) {
       className="inline-flex items-center gap-2 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
     >
       <Download className="h-4 w-4" />
-      {busy ? "Preparing…" : "Download PDF"}
+      {busy
+        ? "Preparing…"
+        : data.docType === "receipt"
+          ? "Download Receipt (PDF)"
+          : "Download Invoice (PDF)"}
     </button>
   )
 }

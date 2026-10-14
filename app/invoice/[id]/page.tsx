@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
+import { paymentMethodLabel } from "@/lib/utils/order-display"
 import { PrintButton } from "./print-button"
 import { ReceiptPdfButton, type ReceiptData } from "./receipt-pdf-button"
 
@@ -40,7 +41,7 @@ export default async function InvoicePage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "*, items:order_items(product_name, product_sku, quantity, unit_price, total_price), customer:profiles(full_name, email, phone)",
+      "*, items:order_items(product_name, product_sku, quantity, unit_price, total_price), customer:profiles(full_name, email, phone), payments(status, provider, provider_metadata, completed_at)",
     )
     .eq("id", id)
     .single()
@@ -83,6 +84,37 @@ export default async function InvoicePage({
   }
   const items = (order.items || []) as Item[]
 
+  // A receipt is proof of payment, so it only exists once money was received
+  // (admin marked it paid, or a MoMo payment succeeded). Until then this is an
+  // invoice marked "Payment pending".
+  type PaymentInfo = {
+    status: string
+    provider: string
+    provider_metadata: unknown
+    completed_at: string | null
+  }
+  const payments = (order.payments || []) as PaymentInfo[]
+  const paidPayment = payments.find((p) => p.status === "successful")
+  const isClosed = order.status === "cancelled" || order.status === "refunded"
+  const isPaid = !!paidPayment && !isClosed
+  const docType: "receipt" | "invoice" = isPaid ? "receipt" : "invoice"
+  const statusLabel =
+    order.status === "cancelled"
+      ? "Cancelled"
+      : order.status === "refunded"
+        ? "Refunded"
+        : isPaid
+          ? "Paid"
+          : "Payment pending"
+  const paidOn = isPaid ? paidPayment?.completed_at ?? null : null
+  const paidVia = isPaid ? paymentMethodLabel(paidPayment) : ""
+  const statusStyle = isPaid
+    ? { chip: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" }
+    : isClosed
+      ? { chip: "bg-neutral-100 text-neutral-700", dot: "bg-neutral-400" }
+      : { chip: "bg-amber-50 text-amber-800", dot: "bg-amber-500" }
+  const totalLabel = isPaid ? "Total paid" : isClosed ? "Total" : "Amount due"
+
   const receiptData: ReceiptData = {
     storeName,
     storeEmail,
@@ -92,9 +124,13 @@ export default async function InvoicePage({
           .filter(Boolean)
           .join(", ")
       : "",
+    docType,
+    statusLabel,
+    paidOn,
+    paidVia,
+    totalLabel,
     orderNumber: order.order_number,
     createdAt: order.created_at,
-    status: order.status,
     currency,
     billToName: ship.full_name || order.customer?.full_name || "Customer",
     billToEmail: order.customer?.email || "",
@@ -155,7 +191,7 @@ export default async function InvoicePage({
             </div>
             <div className="shrink-0 sm:text-right">
               <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-                Invoice
+                {docType === "receipt" ? "Receipt" : "Invoice"}
               </p>
               <p className="mt-1 font-mono text-base font-semibold whitespace-nowrap text-neutral-900">
                 {order.order_number}
@@ -163,9 +199,11 @@ export default async function InvoicePage({
               <p className="text-sm text-neutral-500">
                 {formatDate(order.created_at)}
               </p>
-              <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium capitalize text-neutral-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-neutral-400" />
-                {order.status}
+              <span
+                className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle.chip}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
+                {statusLabel}
               </span>
             </div>
           </div>
@@ -266,13 +304,27 @@ export default async function InvoicePage({
                 </div>
               )}
               <div className="flex justify-between border-t border-neutral-300 pt-2 mt-2 text-base font-semibold">
-                <span>Total</span>
+                <span>{totalLabel}</span>
                 <span className="tabular-nums">
                   {formatCurrency(order.total, currency)}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Payment */}
+          {isPaid ? (
+            <p className="mt-8 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Paid
+              {paidOn ? ` on ${formatDate(paidOn)}` : ""}
+              {paidVia ? ` via ${paidVia}` : ""}.
+            </p>
+          ) : !isClosed ? (
+            <p className="mt-8 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Payment pending. This invoice is not proof of payment; a receipt
+              is issued once payment is confirmed.
+            </p>
+          ) : null}
 
           {/* Footer */}
           <div className="mt-12 border-t border-neutral-200 pt-6 text-center">

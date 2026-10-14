@@ -147,7 +147,11 @@ export default async function OrderDetailPage({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 border border-white/15 px-4 py-2 text-[0.7rem] font-medium tracking-[0.15em] uppercase hover:border-amber-500/50 hover:text-amber-400 transition-colors"
           >
-            View / Download Invoice
+            {payment?.status === "successful" &&
+            order.status !== "cancelled" &&
+            order.status !== "refunded"
+              ? "View / Download Receipt"
+              : "View / Download Invoice"}
           </a>
         </div>
 
