@@ -5,6 +5,7 @@ import { getPaymentStatus } from "@/lib/momo/client"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
+import { deductStock, redeemCoupon } from "@/lib/orders/fulfilment"
 
 export async function GET(
   request: NextRequest,
@@ -92,27 +93,10 @@ export async function GET(
         .delete()
         .eq("profile_id", payment.orders.customer_id)
 
-      // Decrement stock (simplified — in production use a transaction)
-      const { data: orderItems } = await adminDb
-        .from("order_items")
-        .select("product_id, variant_id, quantity")
-        .eq("order_id", payment.order_id)
-
-      if (orderItems) {
-        for (const item of orderItems) {
-          if (item.variant_id) {
-            await adminDb.rpc("decrement_variant_stock", {
-              p_variant_id: item.variant_id,
-              p_quantity: item.quantity,
-            })
-          } else {
-            await adminDb.rpc("decrement_product_stock", {
-              p_product_id: item.product_id,
-              p_quantity: item.quantity,
-            })
-          }
-        }
-      }
+      // Take the items out of stock and count the coupon (each at most
+      // once, even if the webhook and polling both report success).
+      await deductStock(adminDb, payment.order_id)
+      await redeemCoupon(adminDb, payment.order_id)
 
       // Send confirmation email
       try {

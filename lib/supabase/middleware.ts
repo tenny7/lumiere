@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { areaForAdminPath, can, isStaffRole } from "@/lib/permissions"
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -54,9 +55,17 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .single()
 
-    if (!profile || !["admin", "super_admin"].includes(profile.role)) {
+    // Staff roles may enter; each role only reaches its own areas
+    // (lib/permissions.ts). Customers go back to the store.
+    if (!profile || !isStaffRole(profile.role)) {
       const url = request.nextUrl.clone()
       url.pathname = "/"
+      return NextResponse.redirect(url)
+    }
+    if (!can(profile.role, areaForAdminPath(pathname))) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/admin"
+      url.search = ""
       return NextResponse.redirect(url)
     }
   }

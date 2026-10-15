@@ -216,10 +216,9 @@ export async function POST(request: NextRequest) {
       console.error("Address book save failed:", e)
     }
 
-    // Increment coupon usage (best-effort; order already created)
-    if (couponId) {
-      await adminDb.rpc("increment_coupon_uses", { p_coupon_id: couponId })
-    }
+    // The coupon's use is counted when the order is actually placed (COD,
+    // MoMo transfer notice, MoMo success or Mark Paid; see
+    // lib/orders/fulfilment.ts), so abandoned checkouts don't use it up.
 
     // NOTE: admins are notified only when the order is actually PLACED — on COD
     // placement (/api/payments/cod) or when a MoMo payment succeeds

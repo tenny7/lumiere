@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { z } from "zod"
+import { can } from "@/lib/permissions"
 
 const schema = z.object({ orderId: z.string().uuid() })
 
@@ -28,7 +29,8 @@ export async function POST(request: NextRequest) {
     adminDb.from("profiles").select("role").eq("id", user.id).single(),
     adminDb.from("orders").select("customer_id").eq("id", orderId).single(),
   ])
-  const isAdmin = !!profile && ["admin", "super_admin"].includes(profile.role)
+  // Store side of the chat: any staff role with support access.
+  const isAdmin = !!profile && can(profile.role, "support")
   const isOwner = !!order && order.customer_id === user.id
   if (!order || (!isAdmin && !isOwner)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })

@@ -6,6 +6,7 @@ import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsManualMomo } from "@/lib/mail/admin-notify"
 import { escapeHtml as esc } from "@/lib/utils/html"
 import { z } from "zod"
+import { redeemCoupon } from "@/lib/orders/fulfilment"
 
 const schema = z.object({
   orderId: z.string().uuid(),
@@ -93,6 +94,9 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       )
     }
+
+    // The order is placed: count its coupon use now (at most once).
+    await redeemCoupon(adminDb, order.id)
 
     const shipping = (order.shipping_address || {}) as { full_name?: string }
 

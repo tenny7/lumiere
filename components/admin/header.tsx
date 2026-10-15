@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useNotificationSettings } from "@/hooks/use-notification-settings"
 import { playChime } from "@/lib/notification-sound"
 import { useOrdersNeedingAttention } from "@/hooks/use-orders-needing-attention"
+import { can } from "@/lib/permissions"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -128,9 +129,11 @@ export function AdminHeader() {
                 ? `${pending} order${pending > 1 ? "s" : ""} awaiting payment`
                 : "No orders awaiting payment"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push("/admin/crm/activity")}>
-              View activity feed
-            </DropdownMenuItem>
+            {can(role, "activity") && (
+              <DropdownMenuItem onClick={() => router.push("/admin/crm/activity")}>
+                View activity feed
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             {/* Sound alerts — new orders, reviews, support messages */}
             <div className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
@@ -182,9 +185,11 @@ export function AdminHeader() {
             <DropdownMenuItem onClick={() => router.push("/account")}>
               My Account
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push("/admin/settings")}>
-              Settings
-            </DropdownMenuItem>
+            {can(role, "settings") && (
+              <DropdownMenuItem onClick={() => router.push("/admin/settings")}>
+                Settings
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => router.push("/")}>
               View Store
             </DropdownMenuItem>

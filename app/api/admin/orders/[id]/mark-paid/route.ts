@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendOrderConfirmationEmail } from "@/lib/mail/order-confirmation"
 import { COD_METHOD_VALUE } from "@/lib/utils/constants"
+import { can } from "@/lib/permissions"
+import { deductStock, redeemCoupon } from "@/lib/orders/fulfilment"
 
 /**
  * Admin-only: manually mark an order as paid. Mirrors the real payment-success
@@ -30,7 +32,7 @@ export async function POST(
       .select("role")
       .eq("id", user.id)
       .single()
-    if (!profile || !["admin", "super_admin"].includes(profile.role)) {
+    if (!profile || !can(profile.role, "orders.manage")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -41,6 +43,16 @@ export async function POST(
       .single()
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
+    }
+    // A cancelled/refunded order must be restored first, or we'd take stock
+    // and email "Order Confirmed" for an order that isn't going ahead.
+    if (order.status === "cancelled" || order.status === "refunded") {
+      return NextResponse.json(
+        {
+          error: `This order is ${order.status}. Set it back to Pending or Confirmed before marking it paid.`,
+        },
+        { status: 400 },
+      )
     }
 
     const { data: payments } = await adminDb
@@ -89,24 +101,9 @@ export async function POST(
       await adminDb.from("orders").update({ status: "confirmed" }).eq("id", id)
     }
 
-    // Decrement stock (this hasn't happened yet for an unpaid order).
-    const { data: items } = await adminDb
-      .from("order_items")
-      .select("product_id, variant_id, quantity")
-      .eq("order_id", id)
-    for (const item of items || []) {
-      if (item.variant_id) {
-        await adminDb.rpc("decrement_variant_stock", {
-          p_variant_id: item.variant_id,
-          p_quantity: item.quantity,
-        })
-      } else {
-        await adminDb.rpc("decrement_product_stock", {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity,
-        })
-      }
-    }
+    // Take the items out of stock and count the coupon (each at most once).
+    await deductStock(adminDb, id)
+    await redeemCoupon(adminDb, id)
 
     // Clear the customer's cart, matching the real payment-success path.
     await adminDb.from("cart_items").delete().eq("profile_id", order.customer_id)

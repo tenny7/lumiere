@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { z } from "zod"
+import { can } from "@/lib/permissions"
 
 const schema = z.object({
   userId: z.string().uuid(),
@@ -27,13 +28,13 @@ export async function POST(request: NextRequest) {
 
   const adminDb = createAdminClient()
 
-  // Caller must be an admin.
+  // Caller must have support access (admins and sales agents).
   const { data: me } = await adminDb
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single()
-  if (!me || !["admin", "super_admin"].includes(me.role)) {
+  if (!me || !can(me.role, "support")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

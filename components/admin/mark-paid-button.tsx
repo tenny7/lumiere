@@ -28,7 +28,8 @@ export function MarkPaidButton({ orderId }: { orderId: string }) {
         notifyOrdersUpdated()
         router.refresh()
       } else {
-        toast.error("Failed to mark as paid")
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || "Failed to mark as paid")
       }
     } catch {
       toast.error("Failed to mark as paid")

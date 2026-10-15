@@ -21,6 +21,7 @@ import {
 import { useAdminUnreadMessages } from "@/hooks/use-unread-messages"
 import { usePendingReviews } from "@/hooks/use-pending-reviews"
 import { useOrdersNeedingAttention } from "@/hooks/use-orders-needing-attention"
+import { can, type StaffArea } from "@/lib/permissions"
 import {
   Sidebar,
   SidebarContent,
@@ -36,29 +37,41 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-const mainNav = [
-  { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
-  { title: "Support", href: "/admin/support", icon: MessageSquare },
-  { title: "Reviews", href: "/admin/reviews", icon: Star },
-  { title: "Products", href: "/admin/products", icon: Package },
-  { title: "Categories", href: "/admin/categories", icon: FolderTree },
-  { title: "Customers", href: "/admin/customers", icon: Users },
-  { title: "Coupons", href: "/admin/coupons", icon: Ticket },
-  { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+type NavItem = {
+  title: string
+  href: string
+  icon: typeof LayoutDashboard
+  area: StaffArea
+}
+
+const mainNav: NavItem[] = [
+  { title: "Dashboard", href: "/admin", icon: LayoutDashboard, area: "dashboard" },
+  { title: "Orders", href: "/admin/orders", icon: ShoppingCart, area: "orders" },
+  { title: "Support", href: "/admin/support", icon: MessageSquare, area: "support" },
+  { title: "Reviews", href: "/admin/reviews", icon: Star, area: "reviews" },
+  { title: "Products", href: "/admin/products", icon: Package, area: "catalog" },
+  { title: "Categories", href: "/admin/categories", icon: FolderTree, area: "catalog" },
+  { title: "Customers", href: "/admin/customers", icon: Users, area: "customers" },
+  { title: "Coupons", href: "/admin/coupons", icon: Ticket, area: "coupons" },
+  { title: "Analytics", href: "/admin/analytics", icon: BarChart3, area: "analytics" },
 ]
 
-const crmNav = [
-  { title: "Activity", href: "/admin/crm/activity", icon: Activity },
+const crmNav: NavItem[] = [
+  { title: "Activity", href: "/admin/crm/activity", icon: Activity, area: "activity" },
 ]
 
-const settingsNav = [
-  { title: "Settings", href: "/admin/settings", icon: Settings },
-  { title: "Admin Guide", href: "/admin/guide", icon: BookOpen },
+const settingsNav: NavItem[] = [
+  { title: "Settings", href: "/admin/settings", icon: Settings, area: "settings" },
+  { title: "Admin Guide", href: "/admin/guide", icon: BookOpen, area: "guide" },
 ]
 
-export function AdminSidebar() {
+export function AdminSidebar({ role }: { role: string | null }) {
   const pathname = usePathname()
+  // Only show what this role can open (lib/permissions.ts).
+  const allowed = (items: NavItem[]) => items.filter((i) => can(role, i.area))
+  const main = allowed(mainNav)
+  const crm = allowed(crmNav)
+  const bottom = allowed(settingsNav)
   const supportUnread = useAdminUnreadMessages()
   const pendingReviews = usePendingReviews()
   const ordersNeedingAttention = useOrdersNeedingAttention()
@@ -94,7 +107,7 @@ export function AdminSidebar() {
           <SidebarGroupLabel>Store</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNav.map((item) => (
+              {main.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     render={<Link href={item.href} />}
@@ -128,33 +141,37 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {crm.length > 0 && (
+          <>
+            <SidebarSeparator />
+
+            <SidebarGroup>
+              <SidebarGroupLabel>CRM</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {crm.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        render={<Link href={item.href} />}
+                        isActive={pathname.startsWith(item.href)}
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>CRM</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {crmNav.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    render={<Link href={item.href} />}
-                    isActive={pathname.startsWith(item.href)}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settingsNav.map((item) => (
+              {bottom.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     render={<Link href={item.href} />}

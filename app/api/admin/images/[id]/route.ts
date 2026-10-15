@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { can } from "@/lib/permissions"
 
 export async function DELETE(
   request: NextRequest,
@@ -27,7 +28,7 @@ export async function DELETE(
       .eq("id", user.id)
       .single()
 
-    if (!profile || !["admin", "super_admin"].includes(profile.role)) {
+    if (!profile || !can(profile.role, "catalog")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

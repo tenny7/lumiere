@@ -4,6 +4,7 @@ import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { createHmac, timingSafeEqual } from "crypto"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
+import { deductStock, redeemCoupon } from "@/lib/orders/fulfilment"
 
 function verifyWebhookSignature(
   body: string,
@@ -104,27 +105,10 @@ export async function POST(request: NextRequest) {
       // Clear the customer's cart now that the purchase is complete
       await adminDb.from("cart_items").delete().eq("profile_id", order.customer_id)
 
-      // Decrement stock
-      const { data: orderItems } = await adminDb
-        .from("order_items")
-        .select("product_id, variant_id, quantity")
-        .eq("order_id", order.id)
-
-      if (orderItems) {
-        for (const item of orderItems) {
-          if (item.variant_id) {
-            await adminDb.rpc("decrement_variant_stock", {
-              p_variant_id: item.variant_id,
-              p_quantity: item.quantity,
-            })
-          } else {
-            await adminDb.rpc("decrement_product_stock", {
-              p_product_id: item.product_id,
-              p_quantity: item.quantity,
-            })
-          }
-        }
-      }
+      // Take the items out of stock and count the coupon (each at most
+      // once, even if the webhook and polling both report success).
+      await deductStock(adminDb, order.id)
+      await redeemCoupon(adminDb, order.id)
 
       const profile = order.profiles as unknown as {
         email: string

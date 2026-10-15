@@ -184,6 +184,37 @@ export function renderShippingNotificationEmail(props: {
 </html>`
 }
 
+export function renderDeliveredEmail(props: {
+  customerName: string
+  orderNumber: string
+  /** Link to the customer's order page (reviews, support chat). */
+  orderUrl: string
+}): string {
+  const { customerName, orderNumber, orderUrl } = props
+  return `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background-color:#0a0a08;color:#f5f0e8">
+<div style="max-width:600px;margin:0 auto;padding:40px 20px">
+<div style="background-color:#141410;border-radius:8px;overflow:hidden">
+  <div style="padding:32px 40px;border-bottom:1px solid #2a2a24;text-align:center">
+    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">AJABU LIGHTING</h1>
+  </div>
+  <div style="padding:40px">
+    <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Your order has been delivered</h2>
+    <p style="font-size:15px;line-height:24px;color:#a8a294;margin:0 0 24px 0">Hi ${escapeHtml(customerName)}, your order <strong style="color:#f5f0e8">${escapeHtml(orderNumber)}</strong> has been delivered. We hope you love your new lighting.</p>
+    <p style="margin:0 0 28px 0"><a href="${escapeHtml(orderUrl)}" style="display:inline-block;background-color:#c9a96e;color:#0a0a08;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:4px">View your order &amp; leave a review</a></p>
+    <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">If anything isn't right, reply to this email or message us from your order page and we'll sort it out.</p>
+  </div>
+  <div style="padding:24px 40px;border-top:1px solid #2a2a24;text-align:center">
+    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Ajabu Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Ajabu Lighting. All rights reserved.</p>
+  </div>
+</div>
+</div>
+</body>
+</html>`
+}
+
 export function renderWelcomeEmail(props: {
   customerName: string
   appUrl: string

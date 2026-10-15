@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { COD_METHOD_VALUE } from "@/lib/utils/constants"
 import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { z } from "zod"
+import { redeemCoupon } from "@/lib/orders/fulfilment"
 
 const codSchema = z.object({
   orderId: z.string().uuid(),
@@ -93,6 +94,9 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       )
     }
+
+    // The order is placed: count its coupon use now (at most once).
+    await redeemCoupon(adminDb, order.id)
 
     // The order is now genuinely placed — notify admins (best-effort).
     const shipping = (order.shipping_address || {}) as { full_name?: string }

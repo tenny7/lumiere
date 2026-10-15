@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
-import { renderShippingNotificationEmail } from "@/lib/emails/render"
+import {
+  renderShippingNotificationEmail,
+  renderDeliveredEmail,
+} from "@/lib/emails/render"
+import { deductStock, restoreStock } from "@/lib/orders/fulfilment"
 import { z } from "zod"
+import { can } from "@/lib/permissions"
 
 const schema = z.object({
   status: z.enum([
@@ -42,13 +47,19 @@ export async function POST(
       .eq("id", user.id)
       .single()
 
-    if (!profile || !["admin", "super_admin"].includes(profile.role)) {
+    if (!profile || !can(profile.role, "orders.manage")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const parsed = schema.safeParse(await request.json())
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+      return NextResponse.json(
+        {
+          error:
+            "Check the status and tracking details. The tracking link must be a full web address (https://…).",
+        },
+        { status: 400 },
+      )
     }
     const { status, trackingNumber, trackingCarrier, trackingUrl } = parsed.data
 
@@ -75,6 +86,48 @@ export async function POST(
         { error: "Failed to update order" },
         { status: 500 },
       )
+    }
+
+    // Stock follows the order: put it back when cancelled/refunded, and take
+    // it again if a paid order is restored. Each happens at most once.
+    if (status === "cancelled" || status === "refunded") {
+      await restoreStock(adminDb, id)
+    } else {
+      const { data: paid } = await adminDb
+        .from("payments")
+        .select("id")
+        .eq("order_id", id)
+        .eq("status", "successful")
+        .limit(1)
+      if (paid && paid.length > 0) {
+        await deductStock(adminDb, id, { legacyFallback: false })
+      }
+    }
+
+    // Tell the customer it has arrived (best-effort).
+    if (status === "delivered") {
+      const customer = order.customer as unknown as {
+        full_name: string
+        email: string
+      } | null
+      if (customer?.email) {
+        try {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || ""
+          await sendMail({
+            from: EMAIL_FROM,
+            replyTo: EMAIL_REPLY_TO,
+            to: customer.email,
+            subject: `Your order has been delivered — ${order.order_number}`,
+            html: renderDeliveredEmail({
+              customerName: customer.full_name || "there",
+              orderNumber: order.order_number,
+              orderUrl: `${appUrl}/account/orders/${id}`,
+            }),
+          })
+        } catch (emailError) {
+          console.error("Delivered email failed:", emailError)
+        }
+      }
     }
 
     // Notify the customer when the order ships (best-effort).

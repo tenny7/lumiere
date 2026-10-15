@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { can } from "@/lib/permissions"
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       .select("role")
       .eq("id", user.id)
       .single()
-    if (!profile || !["admin", "super_admin"].includes(profile.role)) {
+    if (!profile || !can(profile.role, "catalog")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

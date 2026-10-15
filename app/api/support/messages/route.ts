@@ -5,6 +5,7 @@ import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsNewMessage } from "@/lib/mail/admin-notify"
 import { escapeHtml } from "@/lib/utils/html"
 import { z } from "zod"
+import { can } from "@/lib/permissions"
 
 const sendSchema = z.object({
   orderId: z.string().uuid(),
@@ -22,7 +23,8 @@ async function resolveAccess(userId: string, orderId: string) {
       .eq("id", orderId)
       .single(),
   ])
-  const isAdmin = !!profile && ["admin", "super_admin"].includes(profile.role)
+  // Store side of the chat: any staff role with support access.
+  const isAdmin = !!profile && can(profile.role, "support")
   const isOwner = !!order && order.customer_id === userId
   const blocked = !!profile?.support_blocked
   return { adminDb, order, isAdmin, isOwner, blocked }

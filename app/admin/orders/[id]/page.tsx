@@ -24,6 +24,7 @@ import { ArrowLeft, User, MapPin, CreditCard, FileText } from "lucide-react"
 import { OrderStatusUpdater } from "./status-updater"
 import { MarkPaidButton } from "@/components/admin/mark-paid-button"
 import { MessageSquare, ArrowUpRight } from "lucide-react"
+import { can } from "@/lib/permissions"
 
 export const dynamic = "force-dynamic"
 
@@ -53,6 +54,15 @@ export default async function OrderDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+
+  // What this staff member may do here (lib/permissions.ts).
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser()
+  const { data: viewerProfile } = viewer
+    ? await supabase.from("profiles").select("role").eq("id", viewer.id).single()
+    : { data: null }
+  const viewerRole = (viewerProfile?.role as string | undefined) ?? null
 
   const { data: order } = await supabase
     .from("orders")
@@ -127,7 +137,8 @@ export default async function OrderDetailPage({
 
   // Admin can update from any non-terminal state (incl. pending, so orders can
   // be advanced manually while MoMo isn't fully wired up).
-  const canUpdateStatus = !["refunded"].includes(order.status)
+  const canUpdateStatus =
+    !["refunded"].includes(order.status) && can(viewerRole, "orders.manage")
 
   return (
     <div className="space-y-6">
@@ -407,35 +418,37 @@ export default async function OrderDetailPage({
           )}
 
           {/* Support — opens the dedicated chat for this order */}
-          <Card>
-            <CardHeader className="flex flex-row items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-              <CardTitle className="text-base">Support</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link
-                href={`/admin/support/${order.id}`}
-                className="flex items-center justify-between rounded-md border p-4 hover:border-amber-500/40 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-medium">Open support chat</p>
-                  <p className="text-xs text-muted-foreground">
-                    {messageCount && messageCount > 0
-                      ? `${messageCount} message${messageCount === 1 ? "" : "s"} — reaches the customer's inbox and email`
-                      : "Message the customer — reaches their inbox and email"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {unreadFromCustomer && unreadFromCustomer > 0 ? (
-                    <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-black text-[0.6rem] font-semibold px-2 py-0.5">
-                      {unreadFromCustomer} new
-                    </span>
-                  ) : null}
-                  <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
+          {can(viewerRole, "support") && (
+            <Card>
+              <CardHeader className="flex flex-row items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-base">Support</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Link
+                  href={`/admin/support/${order.id}`}
+                  className="flex items-center justify-between rounded-md border p-4 hover:border-amber-500/40 transition-colors"
+                >
+                  <div>
+                    <p className="text-sm font-medium">Open support chat</p>
+                    <p className="text-xs text-muted-foreground">
+                      {messageCount && messageCount > 0
+                        ? `${messageCount} message${messageCount === 1 ? "" : "s"} — reaches the customer's inbox and email`
+                        : "Message the customer — reaches their inbox and email"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {unreadFromCustomer && unreadFromCustomer > 0 ? (
+                      <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-black text-[0.6rem] font-semibold px-2 py-0.5">
+                        {unreadFromCustomer} new
+                      </span>
+                    ) : null}
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right column */}
@@ -447,9 +460,11 @@ export default async function OrderDetailPage({
                 <CardTitle className="text-base">Update Status</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {payment?.status !== "successful" && (
-                  <MarkPaidButton orderId={order.id} />
-                )}
+                {/* Not on cancelled/refunded orders: restore the order first. */}
+                {payment?.status !== "successful" &&
+                  !["cancelled", "refunded"].includes(order.status) && (
+                    <MarkPaidButton orderId={order.id} />
+                  )}
                 <OrderStatusUpdater
                   orderId={order.id}
                   currentStatus={order.status}
