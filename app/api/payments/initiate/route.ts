@@ -7,7 +7,7 @@ import { z } from "zod"
 
 const initiateSchema = z.object({
   orderId: z.string().uuid(),
-  provider: z.enum(["momo_mtn", "momo_vodafone", "momo_airteltigo"]),
+  provider: z.enum(["momo_mtn"]),
   phoneNumber: z.string().min(1).max(30),
 })
 

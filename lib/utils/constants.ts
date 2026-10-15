@@ -20,10 +20,11 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   refunded: "Refunded",
 }
 
+// Automatic MoMo checkout (MTN Collections API). Vodafone Cash and AirtelTigo
+// Money were removed: they're Ghanaian networks and never had an integration.
+// (The DB enum still has them for old data; no payment ever used them.)
 export const MOMO_PROVIDERS = [
   { value: "momo_mtn", label: "MTN Mobile Money", color: "#ffcc00" },
-  { value: "momo_vodafone", label: "Vodafone Cash", color: "#e60000" },
-  { value: "momo_airteltigo", label: "AirtelTigo Money", color: "#ff3333" },
 ] as const
 
 // Manual MoMo transfer. No gateway/API: the customer sends money to the store's

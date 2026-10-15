@@ -50,25 +50,46 @@ export default async function AdminCustomersPage({
 
   let query = supabase
     .from("profiles")
-    .select("*, orders(total, status)")
+    .select("*, orders(total, status, payments(status))")
     .order("created_at", { ascending: false })
     .limit(100)
 
-  if (role && role !== "all") {
-    query = query.eq("role", role)
+  // "Staff" covers both limited roles; "Admins" includes super admins.
+  // ("sales_agent" kept so older links still work.)
+  const ROLE_FILTERS: Record<string, string[]> = {
+    customer: ["customer"],
+    staff: ["sales_agent", "inventory_manager"],
+    sales_agent: ["sales_agent", "inventory_manager"],
+    admin: ["admin", "super_admin"],
+  }
+  if (role && ROLE_FILTERS[role]) {
+    query = query.in("role", ROLE_FILTERS[role])
   }
 
   const { data: profiles, error } = await query
   if (error) console.error("Customers query error:", error.message)
 
   const customers = (profiles ?? []).map((profile) => {
-    const orders = profile.orders as unknown as
-      | { total: number; status: string }[]
-      | null
-    const orderCount = orders?.length ?? 0
-    const totalSpent = (orders ?? [])
-      .filter((o) => o.status !== "cancelled" && o.status !== "refunded")
-      .reduce((sum: number, o: { total: number }) => sum + (o.total ?? 0), 0)
+    const orders = (profile.orders ?? []) as unknown as {
+      total: number
+      status: string
+      payments: { status: string }[] | null
+    }[]
+    const statuses = (o: (typeof orders)[number]) =>
+      (o.payments ?? []).map((p) => p.status)
+    // Placed = has a payment record (abandoned checkouts don't count).
+    const orderCount = orders.filter((o) =>
+      statuses(o).some((st) => ["pending", "processing", "successful"].includes(st)),
+    ).length
+    // Spent = paid orders that weren't later cancelled or refunded.
+    const totalSpent = orders
+      .filter(
+        (o) =>
+          statuses(o).includes("successful") &&
+          o.status !== "cancelled" &&
+          o.status !== "refunded",
+      )
+      .reduce((sum, o) => sum + Number(o.total ?? 0), 0)
     return { ...profile, orderCount, totalSpent }
   })
 
@@ -86,7 +107,7 @@ export default async function AdminCustomersPage({
         {[
           { value: "all", label: "All" },
           { value: "customer", label: "Customers" },
-          { value: "sales_agent", label: "Staff" },
+          { value: "staff", label: "Staff" },
           { value: "admin", label: "Admins" },
         ].map((filter) => {
           const isActive = (role ?? "all") === filter.value
