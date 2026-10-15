@@ -31,10 +31,10 @@ export function AdminNotifications() {
   useEffect(() => {
     const supabase = createClient()
 
+    // Always show the pop-up; "Sound alerts" only controls the chime.
     function alert(message: string, href?: string) {
       const s = readNotifSettings()
-      if (!s.enabled) return
-      playChime(s.volume)
+      if (s.enabled) playChime(s.volume)
       toast(message, href ? { action: { label: "View", onClick: () => router.push(href) } } : undefined)
     }
 

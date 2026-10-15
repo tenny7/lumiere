@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
 import { useNotificationSettings } from "@/hooks/use-notification-settings"
 import { playChime } from "@/lib/notification-sound"
+import { useOrdersNeedingAttention } from "@/hooks/use-orders-needing-attention"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +38,8 @@ export function AdminHeader() {
   const [query, setQuery] = useState("")
   const [name, setName] = useState("Admin")
   const [role, setRole] = useState<string | null>(null)
-  const [pending, setPending] = useState(0)
+  // Same count as the Orders sidebar badge (placed, unpaid), kept live.
+  const pending = useOrdersNeedingAttention()
   const { settings: notif, update: updateNotif } = useNotificationSettings()
 
   useEffect(() => {
@@ -54,12 +56,6 @@ export function AdminHeader() {
         .single()
       if (profile) setName(profile.username || profile.full_name || "Admin")
       if (profile?.role) setRole(profile.role)
-
-      const { count } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending")
-      setPending(count ?? 0)
     }
     load()
   }, [])
@@ -129,8 +125,8 @@ export function AdminHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push("/admin/orders")}>
               {pending > 0
-                ? `${pending} pending order${pending > 1 ? "s" : ""} to review`
-                : "No pending orders"}
+                ? `${pending} order${pending > 1 ? "s" : ""} awaiting payment`
+                : "No orders awaiting payment"}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/admin/crm/activity")}>
               View activity feed
