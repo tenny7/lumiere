@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { getSocialLinks } from "@/lib/utils/settings"
+import { SocialLinkList } from "@/components/storefront/social-links"
 
 const footerLinks = {
   shop: [
@@ -25,7 +27,9 @@ const footerLinks = {
   ],
 }
 
-export function Footer() {
+export async function Footer() {
+  const socialLinks = await getSocialLinks()
+
   return (
     <footer className="border-t border-white/5 bg-black">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,6 +46,7 @@ export function Footer() {
               Curated lighting for spaces that deserve to shine. Handpicked
               fixtures from artisan makers.
             </p>
+            <SocialLinkList links={socialLinks} className="mt-5" />
           </div>
 
           {/* Shop */}

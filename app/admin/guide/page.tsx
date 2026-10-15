@@ -49,7 +49,7 @@ const SECTIONS: GuideTocSection[] = [
   { id: "coupons", title: "Coupons", keywords: "discount code percentage fixed free shipping" },
   { id: "analytics", title: "Analytics & search", keywords: "charts revenue top products search" },
   { id: "activity", title: "Activity feed", keywords: "log history crm audit" },
-  { id: "settings", title: "Settings", keywords: "store delivery fee vat momo number ussd payment methods team" },
+  { id: "settings", title: "Settings", keywords: "store delivery fee vat momo number ussd payment methods team social media whatsapp instagram facebook" },
   { id: "notifications", title: "Notifications & sounds", keywords: "bell badge sound volume toast alerts" },
   { id: "emails", title: "Emails the store sends", keywords: "email confirmation shipped notice" },
   { id: "faq", title: "Troubleshooting", keywords: "help problem faq stuck spam" },
@@ -592,6 +592,15 @@ export default function AdminGuidePage() {
             <p>
               Store name, email, phone and address. These appear at the top of
               every invoice and receipt, so keep them up to date.
+            </p>
+            <p>
+              <strong>Social media</strong>: your WhatsApp number, Instagram
+              and Facebook. They show as icons in the site footer and as
+              buttons on the Contact page. Type a username or number, or paste
+              the link. Under each box you&apos;ll see the exact link
+              customers will open, so click it to check it&apos;s yours. Leave
+              a box empty to hide that one. The site shows the change the next
+              time a page is opened; refresh once if you still see the old one.
             </p>
 
             <GuideH3>Payments</GuideH3>
