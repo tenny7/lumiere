@@ -1,7 +1,12 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
-import { ORDER_STATUS_LABELS, MOMO_PROVIDERS } from "@/lib/utils/constants"
+import {
+  ORDER_STATUS_LABELS,
+  MOMO_PROVIDERS,
+  MOMO_MANUAL_VALUE,
+} from "@/lib/utils/constants"
+import { can } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { GettingStarted, type OnboardingStep } from "@/components/admin/getting-started"
@@ -49,36 +54,49 @@ const statusColors: Record<string, string> = {
 export default async function AdminDashboard() {
   const supabase = await createClient()
 
+  // Money figures are for admins only (lib/permissions.ts "finance").
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser()
+  const { data: viewerProfile } = viewer
+    ? await supabase.from("profiles").select("role").eq("id", viewer.id).single()
+    : { data: null }
+  const viewerRole = (viewerProfile?.role as string | undefined) ?? null
+  const showFinance = can(viewerRole, "finance")
+
   const todayISO = startOfTodayKigaliISO()
 
   const [
     { data: todayOrders },
-    { count: pendingCount },
+    { count: awaitingPaymentCount },
     { count: newCustomers },
-    { count: lowStockCount },
+    { data: stockRows },
     { data: recentOrders },
     { count: productCount },
     { count: featuredCount },
     { data: storePhoneRow },
-    { data: momoPayments },
+    { data: paidPayments },
   ] = await Promise.all([
+    // Orders created today, with payments to tell placed from abandoned.
     supabase
       .from("orders")
-      .select("total, status")
+      .select("id, payments(status)")
       .gte("created_at", todayISO),
+    // Placed but unpaid — same count as the Orders badge.
     supabase
       .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending"),
+      .select("id, payments!inner(id)", { count: "exact", head: true })
+      .eq("status", "pending")
+      .in("payments.status", ["pending", "processing"]),
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("role", "customer")
       .gte("created_at", todayISO),
+    // Each product's own "Low Stock Alert" level (compared below).
     supabase
       .from("products")
-      .select("id", { count: "exact", head: true })
-      .lte("stock_quantity", 5)
+      .select("stock_quantity, low_stock_threshold")
       .eq("is_active", true),
     supabase
       .from("orders")
@@ -95,16 +113,11 @@ export default async function AdminDashboard() {
       .select("value")
       .eq("key", "store_phone")
       .maybeSingle(),
-    // Successful MoMo collections (recorded from our own payments — no MoMo API
-    // dependency). Excludes Cash on Delivery and manual entries.
+    // Money actually received: successful payments, all methods.
     supabase
       .from("payments")
-      .select("amount, completed_at")
-      .eq("status", "successful")
-      .in(
-        "provider",
-        MOMO_PROVIDERS.map((p) => p.value),
-      ),
+      .select("amount, completed_at, provider, provider_metadata, order:orders(status)")
+      .eq("status", "successful"),
   ])
 
   const storePhone =
@@ -136,30 +149,61 @@ export default async function AdminDashboard() {
     },
   ]
 
-  const revenueToday = (todayOrders || [])
-    .filter((o) => o.status !== "cancelled" && o.status !== "refunded")
-    .reduce((sum, o) => sum + Number(o.total), 0)
-  const ordersToday = todayOrders?.length ?? 0
-
-  // MoMo collections recorded from our own successful payments.
-  const momoCollectedTotal = (momoPayments || []).reduce(
-    (sum, p) => sum + Number(p.amount),
-    0,
+  // Revenue = money actually received (successful payments), dated by when it
+  // was paid, leaving out orders later cancelled or refunded.
+  type PaidRow = {
+    amount: number
+    completed_at: string | null
+    provider: string
+    provider_metadata: { method?: string } | null
+    order: { status: string } | null
+  }
+  const received = ((paidPayments ?? []) as unknown as PaidRow[]).filter(
+    (p) => p.order?.status !== "cancelled" && p.order?.status !== "refunded",
   )
-  const momoPaymentsCount = momoPayments?.length ?? 0
-  const momoCollectedToday = (momoPayments || [])
-    .filter((p) => p.completed_at && p.completed_at >= todayISO)
-    .reduce((sum, p) => sum + Number(p.amount), 0)
-  // MTN Collections fee is 2.36% (VAT inclusive), so ~97.64% actually settles.
+  const sum = (rows: PaidRow[]) =>
+    rows.reduce((total, p) => total + Number(p.amount), 0)
+  const paidToday = (p: PaidRow) => !!p.completed_at && p.completed_at >= todayISO
+  const revenueToday = sum(received.filter(paidToday))
+
+  // Orders placed today (abandoned checkouts have no payment record).
+  const ordersToday = (
+    (todayOrders ?? []) as { payments: { status: string }[] | null }[]
+  ).filter((o) =>
+    (o.payments ?? []).some((p) =>
+      ["pending", "processing", "successful"].includes(p.status),
+    ),
+  ).length
+
+  const lowStockCount = (stockRows ?? []).filter(
+    (p) => p.stock_quantity <= p.low_stock_threshold,
+  ).length
+
+  // Mobile Money received: MoMo app checkout + MoMo transfers.
+  const appValues = MOMO_PROVIDERS.map((p) => p.value) as string[]
+  const momoApp = received.filter((p) => appValues.includes(p.provider))
+  const momoTransfer = received.filter(
+    (p) => p.provider_metadata?.method === MOMO_MANUAL_VALUE,
+  )
+  const momoAll = [...momoApp, ...momoTransfer]
+  const momoCollectedTotal = sum(momoAll)
+  const momoPaymentsCount = momoAll.length
+  const momoCollectedToday = sum(momoAll.filter(paidToday))
+  // MTN's Collections fee (2.36%, VAT inclusive) applies to MoMo app payments
+  // only; transfers to your number arrive in full.
   const MOMO_FEE_RATE = 0.0236
-  const momoCollectedNet = momoCollectedTotal * (1 - MOMO_FEE_RATE)
+  const momoCollectedNet = sum(momoApp) * (1 - MOMO_FEE_RATE) + sum(momoTransfer)
 
   const stats = [
-    {
-      title: "Today's Revenue",
-      value: formatCurrency(revenueToday),
-      icon: DollarSign,
-    },
+    ...(showFinance
+      ? [
+          {
+            title: "Today's Revenue",
+            value: formatCurrency(revenueToday),
+            icon: DollarSign,
+          },
+        ]
+      : []),
     {
       title: "Orders Today",
       value: String(ordersToday),
@@ -171,8 +215,8 @@ export default async function AdminDashboard() {
       icon: Users,
     },
     {
-      title: "Pending Orders",
-      value: String(pendingCount ?? 0),
+      title: "Awaiting Payment",
+      value: String(awaitingPaymentCount ?? 0),
       icon: Clock,
     },
   ]
@@ -186,11 +230,10 @@ export default async function AdminDashboard() {
         </p>
       </div>
 
-      {/* First-run onboarding (hides once complete or dismissed) */}
-      <GettingStarted
-        steps={onboardingSteps}
-        className="dash-rise"
-      />
+      {/* First-run onboarding (hides once complete or dismissed); admins only */}
+      {can(viewerRole, "settings") && (
+        <GettingStarted steps={onboardingSteps} className="dash-rise" />
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -217,47 +260,50 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      {/* MoMo collections — recorded from our own successful payments (no MoMo
-          API dependency). This is the reconciliation figure for money collected
-          via Mobile Money; it is not the live MoMo wallet balance. */}
-      <Card
-        className="dash-rise"
-        style={{ "--i": 5 } as React.CSSProperties}
-      >
-        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-              <Wallet className="h-5 w-5" />
-            </span>
-            <div>
+      {/* Mobile Money received — from our own successful payments (MoMo app
+          checkout + verified MoMo transfers). A reconciliation figure, not the
+          live MoMo wallet balance. Admins only. */}
+      {showFinance && (
+        <Card
+          className="dash-rise"
+          style={{ "--i": 5 } as React.CSSProperties}
+        >
+          <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                <Wallet className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Mobile Money received
+                </p>
+                <p className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
+                  {formatCurrency(momoCollectedTotal)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {momoPaymentsCount} successful Mobile Money payment
+                  {momoPaymentsCount === 1 ? "" : "s"}
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-600">
+                  ≈ {formatCurrency(momoCollectedNet)} net (after MTN&apos;s 2.36% fee on
+                  MoMo app payments)
+                </p>
+              </div>
+            </div>
+            <div className="sm:text-right">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                MoMo Collected (recorded)
+                Collected today
               </p>
-              <p className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
-                {formatCurrency(momoCollectedTotal)}
+              <p className="mt-0.5 text-lg font-semibold tracking-tight tabular-nums">
+                {formatCurrency(momoCollectedToday)}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {momoPaymentsCount} successful Mobile Money payment
-                {momoPaymentsCount === 1 ? "" : "s"}
-              </p>
-              <p className="mt-0.5 text-xs text-emerald-600">
-                ≈ {formatCurrency(momoCollectedNet)} net (after 2.36% MoMo fee)
+              <p className="text-[0.7rem] text-muted-foreground">
+                From confirmed payments — not the live MoMo wallet balance.
               </p>
             </div>
-          </div>
-          <div className="sm:text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Collected today
-            </p>
-            <p className="mt-0.5 text-lg font-semibold tracking-tight tabular-nums">
-              {formatCurrency(momoCollectedToday)}
-            </p>
-            <p className="text-[0.7rem] text-muted-foreground">
-              From confirmed payments — not the live MoMo wallet balance.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Orders */}
@@ -343,15 +389,18 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {[
-              { label: "Add New Product", href: "/admin/products/new", icon: Package },
-              { label: "View Pending Orders", href: "/admin/orders", icon: Clock },
+              { label: "Add New Product", href: "/admin/products/new", icon: Package, area: "catalog" as const },
+              { label: "View Orders", href: "/admin/orders", icon: Clock, area: "orders" as const },
               {
-                label: `Low Stock (${lowStockCount ?? 0})`,
+                label: `Low Stock (${lowStockCount})`,
                 href: "/admin/products",
                 icon: Package,
+                area: "catalog" as const,
               },
-              { label: "View Analytics", href: "/admin/analytics", icon: TrendingUp },
-            ].map((action) => (
+              { label: "View Analytics", href: "/admin/analytics", icon: TrendingUp, area: "analytics" as const },
+            ]
+              .filter((action) => can(viewerRole, action.area))
+              .map((action) => (
               <Link
                 key={action.label}
                 href={action.href}

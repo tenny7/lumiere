@@ -42,36 +42,50 @@ export default async function AdminAnalyticsPage() {
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
 
-  // Revenue over last 30 days
-  const { data: recentOrders } = await supabase
-    .from("orders")
-    .select("total, currency, created_at, status")
-    .gte("created_at", thirtyDaysAgo.toISOString())
-    .not("status", "in", "(cancelled,refunded)")
+  // Revenue = money actually received in the last 30 days: successful
+  // payments by when they were paid, leaving out orders later cancelled or
+  // refunded. (Unpaid and abandoned orders never count.)
+  const { data: recentPaid } = await supabase
+    .from("payments")
+    .select("amount, completed_at, order_id, order:orders(status)")
+    .eq("status", "successful")
+    .gte("completed_at", thirtyDaysAgo.toISOString())
+  const paidRows = ((recentPaid ?? []) as unknown as {
+    amount: number
+    completed_at: string
+    order_id: string
+    order: { status: string } | null
+  }[]).filter(
+    (p) => p.order?.status !== "cancelled" && p.order?.status !== "refunded",
+  )
+  const paidOrderIds = [...new Set(paidRows.map((p) => p.order_id))]
 
-  // Group revenue by date
+  // Calendar day in Kigali (Central Africa Time, UTC+2, no DST).
+  const kigaliDay = (ms: number) =>
+    new Date(ms + 2 * 60 * 60 * 1000).toISOString().split("T")[0]
+
   const revenueByDate: Record<string, number> = {}
   let totalRevenue = 0
-  ;(recentOrders ?? []).forEach((order) => {
-    const date = new Date(order.created_at).toISOString().split("T")[0]
-    revenueByDate[date] = (revenueByDate[date] ?? 0) + order.total
-    totalRevenue += order.total
-  })
+  for (const p of paidRows) {
+    const date = kigaliDay(new Date(p.completed_at).getTime())
+    revenueByDate[date] = (revenueByDate[date] ?? 0) + Number(p.amount)
+    totalRevenue += Number(p.amount)
+  }
 
   // Continuous last-14-days series (one entry per day, 0 for days with no sales).
   const daySeries: { label: string; value: number }[] = []
   for (let i = 13; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-    const key = d.toISOString().split("T")[0]
+    const key = kigaliDay(now.getTime() - i * 24 * 60 * 60 * 1000)
     daySeries.push({ label: key, value: revenueByDate[key] ?? 0 })
   }
 
-  // Top selling products
-  const { data: topProducts } = await supabase
-    .from("order_items")
-    .select("product_name, quantity, unit_price, total_price")
-    .order("quantity", { ascending: false })
-    .limit(50)
+  // Top selling products: items from those paid orders.
+  const { data: topProducts } = paidOrderIds.length
+    ? await supabase
+        .from("order_items")
+        .select("product_name, quantity, unit_price, total_price")
+        .in("order_id", paidOrderIds)
+    : { data: [] as { product_name: string; quantity: number; unit_price: number; total_price: number }[] }
 
   // Aggregate by product name
   const productAgg: Record<
@@ -203,7 +217,7 @@ export default async function AdminAnalyticsPage() {
               {formatCurrency(totalRevenue)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {recentOrders?.length ?? 0} orders
+              {paidOrderIds.length} paid orders
             </p>
           </CardContent>
         </Card>
@@ -307,7 +321,9 @@ export default async function AdminAnalyticsPage() {
       {/* Top Selling Products */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Top Selling Products</CardTitle>
+          <CardTitle className="text-base">
+            Top Selling Products (paid, last 30 days)
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg">
