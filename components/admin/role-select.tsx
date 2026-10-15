@@ -34,6 +34,7 @@ export function RoleSelect({
   isSelf = false,
   viewerIsSuperAdmin = false,
   onChanged,
+  compact = false,
 }: {
   userId: string
   currentRole: UserRole
@@ -41,6 +42,8 @@ export function RoleSelect({
   viewerIsSuperAdmin?: boolean
   /** Called after the role is saved. */
   onChanged?: (role: UserRole) => void
+  /** Smaller trigger for narrow lists (e.g. the Team page sidebar). */
+  compact?: boolean
 }) {
   const router = useRouter()
   const [role, setRole] = useState<UserRole>(currentRole)
@@ -90,7 +93,11 @@ export function RoleSelect({
       disabled={saving || locked}
     >
       <SelectTrigger
-        className="w-44 h-8 text-xs capitalize"
+        className={
+          compact
+            ? "w-32 h-7 text-[0.7rem] capitalize"
+            : "w-44 h-8 text-xs capitalize"
+        }
         title={
           isSelf
             ? "You can't change your own role. Ask another admin."

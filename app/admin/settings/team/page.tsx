@@ -4,6 +4,7 @@ import { SettingsNav } from "@/components/admin/settings-nav"
 import { RoleSelect } from "@/components/admin/role-select"
 import { OnlineDot } from "@/components/online-dot"
 import { AddTeamMember } from "@/components/admin/add-team-member"
+import { UserPresenceSidebar } from "@/components/admin/user-presence-sidebar"
 import {
   Table,
   TableBody,
@@ -27,12 +28,20 @@ export default async function TeamSettingsPage() {
   const viewerIsSuperAdmin = viewerProfile?.role === "super_admin"
   const viewerIsAdmin = viewerIsSuperAdmin || viewerProfile?.role === "admin"
 
-  // Staff first (any non-customer role), then everyone else.
-  const { data: staff } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, role, created_at")
-    .neq("role", "customer")
-    .order("created_at", { ascending: true })
+  // Staff (any non-customer role) for the main table, and every account for
+  // the sidebar. Both readable by staff via RLS.
+  const [{ data: staff }, { data: allUsers }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, email, role, created_at")
+      .neq("role", "customer")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("profiles")
+      .select("id, full_name, email, role")
+      .order("created_at", { ascending: false })
+      .limit(300),
+  ])
 
   return (
     <div className="space-y-6">
@@ -45,70 +54,82 @@ export default async function TeamSettingsPage() {
 
       <SettingsNav />
 
-      {viewerIsAdmin && (
-        <AddTeamMember viewerIsSuperAdmin={viewerIsSuperAdmin} />
-      )}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          {viewerIsAdmin && (
+            <AddTeamMember viewerIsSuperAdmin={viewerIsSuperAdmin} />
+          )}
 
-      <div>
-        <h2 className="text-base font-semibold">Current team</h2>
-        <p className="text-sm text-muted-foreground">
-          Everyone with a staff role. To remove someone&apos;s access, set them
-          back to Customer. You can&apos;t change your own role.
-        </p>
-      </div>
+          <div>
+            <h2 className="text-base font-semibold">Current team</h2>
+            <p className="text-sm text-muted-foreground">
+              Everyone with a staff role. To remove someone&apos;s access, set
+              them back to Customer. You can&apos;t change your own role.
+            </p>
+          </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Role</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {staff?.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell className="font-medium">
-                  <span className="inline-flex items-center gap-2">
-                    <OnlineDot userId={member.id} />
-                    {member.full_name}
-                    {member.id === viewer?.id && (
-                      <span className="text-xs font-normal text-muted-foreground">
-                        (you)
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Role</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {staff?.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        <OnlineDot userId={member.id} />
+                        {member.full_name}
+                        {member.id === viewer?.id && (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            (you)
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {member.email}
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {formatDate(member.created_at)}
-                </TableCell>
-                <TableCell>
-                  <RoleSelect
-                    userId={member.id}
-                    currentRole={member.role}
-                    isSelf={member.id === viewer?.id}
-                    viewerIsSuperAdmin={viewerIsSuperAdmin}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-            {(!staff || staff.length === 0) && (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center py-12 text-muted-foreground"
-                >
-                  No staff members yet
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {member.email}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {formatDate(member.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      <RoleSelect
+                        key={`${member.id}:${member.role}`}
+                        userId={member.id}
+                        currentRole={member.role}
+                        isSelf={member.id === viewer?.id}
+                        viewerIsSuperAdmin={viewerIsSuperAdmin}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!staff || staff.length === 0) && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      No staff members yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <UserPresenceSidebar
+          users={allUsers ?? []}
+          viewerId={viewer?.id ?? null}
+          viewerIsAdmin={viewerIsAdmin}
+          viewerIsSuperAdmin={viewerIsSuperAdmin}
+        />
       </div>
     </div>
   )

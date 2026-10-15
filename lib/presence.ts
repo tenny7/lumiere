@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useSyncExternalStore } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 // A user is "online" if their browser checked in within this window. The
@@ -30,10 +31,11 @@ async function refresh() {
   const userIds = [...ids.keys()]
   if (userIds.length === 0) return
   const supabase = createClient()
-  const { data, error } = await supabase
-    .from("user_presence")
-    .select("user_id, last_seen_at")
-    .in("user_id", userIds)
+  const query = supabase.from("user_presence").select("user_id, last_seen_at")
+  // Many ids would make the request URL too long; the table holds one small
+  // row per user, so for big lists fetch it whole (staff RLS) instead.
+  const { data, error } =
+    userIds.length > 50 ? await query : await query.in("user_id", userIds)
   if (error) return // e.g. migration not applied yet: leave dots hidden
   const lastSeen: Record<string, string | null> = {}
   for (const id of userIds) lastSeen[id] = null
@@ -75,6 +77,20 @@ export function subscribePresence(listener: () => void) {
 
 export const getPresenceSnapshot = () => snapshot
 export const getPresenceServerSnapshot = () => SERVER_SNAPSHOT
+
+/** Track a list of users and read their presence (for lists/sorting). */
+export function usePresence(userIds: string[]) {
+  const key = userIds.join(",")
+  useEffect(() => {
+    const untrack = key ? key.split(",").map((id) => trackUser(id)) : []
+    return () => untrack.forEach((stop) => stop())
+  }, [key])
+  return useSyncExternalStore(
+    subscribePresence,
+    getPresenceSnapshot,
+    getPresenceServerSnapshot,
+  )
+}
 
 export function isOnline(lastSeen: string | null | undefined, now: number) {
   return !!lastSeen && now - new Date(lastSeen).getTime() < ONLINE_WINDOW_MS
