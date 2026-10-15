@@ -37,7 +37,7 @@ export const metadata = { title: "Admin Guide — Ajabu Lighting" }
 
 const SECTIONS: GuideTocSection[] = [
   { id: "start", title: "Daily routine", keywords: "start overview checklist morning" },
-  { id: "access", title: "Who can use the admin", keywords: "roles permissions access admin super" },
+  { id: "access", title: "Who can use the admin", keywords: "roles permissions access admin super sales agent inventory manager staff" },
   { id: "dashboard", title: "Dashboard", keywords: "revenue today stats cards momo collected" },
   { id: "orders", title: "Orders", keywords: "status ship tracking cancel invoice receipt mark paid badge" },
   { id: "payments", title: "Payments & verifying MoMo", keywords: "momo transfer verify cash on delivery cod ussd paid" },
@@ -139,9 +139,16 @@ export default function AdminGuidePage() {
                 ["Customer", "No", "Shops on the site. Every new sign-up starts here."],
                 ["Admin", "Yes", "Runs the store: orders, products, customers, settings."],
                 ["Super admin", "Yes", "Everything an admin can do, plus granting or removing super admin."],
-                ["Sales agent / Inventory manager", "No (not yet)", "Reserved for future limited staff screens. Today they can't open the admin."],
+                ["Sales agent", "Yes, limited", "Orders (incl. changing status and Mark as paid), Support, Reviews, Customers (view only)."],
+                ["Inventory manager", "Yes, limited", "Products and Categories, and viewing Orders."],
               ]}
             />
+            <p className="text-muted-foreground">
+              Limited staff only see the menu items they can use, and
+              revenue figures are shown to admins only. If they open a page
+              they don&apos;t have access to, they&apos;re taken back to the
+              Dashboard.
+            </p>
             <Bullets
               items={[
                 <>
@@ -172,13 +179,13 @@ export default function AdminGuidePage() {
             <InfoTable
               head={["Card", "What it shows"]}
               rows={[
-                ["Today's Revenue", "Total of orders created today, excluding cancelled and refunded. Includes orders not paid yet."],
-                ["Orders Today", "Every order created today, in any status."],
+                ["Today's Revenue", "Money actually received today (all payment methods), leaving out orders later cancelled or refunded. Admins only."],
+                ["Orders Today", "Orders placed today. Abandoned checkouts don't count."],
                 ["New Customers Today", "Customer accounts created today."],
-                ["Pending Orders", "All orders still in Pending status."],
-                ["MoMo Collected (recorded)", "Payments made through the MoMo app checkout, with an estimate after MTN's 2.36% fee. MoMo transfers and cash aren't included. It's not your live wallet balance."],
+                ["Awaiting Payment", "Orders placed but not paid yet. Same number as the Orders badge."],
+                ["Mobile Money received", "All Mobile Money received: MoMo app checkout plus verified MoMo transfers, with today's amount and an estimate after MTN's 2.36% fee on app payments. Not your live wallet balance. Admins only."],
                 ["Recent Orders", "The latest 6 orders. Click one to open it."],
-                ["Quick Actions", "Shortcuts to add a product, see orders, low stock (5 or fewer) and analytics."],
+                ["Quick Actions", "Shortcuts to add a product, see orders, products at or below their Low Stock Alert, and analytics. Each person only sees the ones they can use."],
               ]}
             />
             <Callout tone="info" title="“Get your store ready” checklist">
@@ -252,12 +259,17 @@ export default function AdminGuidePage() {
                 ["Refunded", "Final. No further changes."],
               ]}
             />
-            <Callout tone="warning" title="Cancelling or refunding doesn't move money or stock">
-              Setting <UI>Cancelled</UI> or <UI>Refunded</UI> only changes the
-              label. It doesn&apos;t send money back, put stock back on the
-              shelf, or email the customer. Do those yourself (refund by MoMo,
-              adjust stock on the product, message the customer).
+            <Callout tone="info" title="What cancelling or refunding does">
+              For a paid order, <UI>Cancelled</UI> or <UI>Refunded</UI> puts
+              the items back in stock automatically, and restoring the order
+              takes them out again. It doesn&apos;t send money back or email
+              the customer: refund by MoMo yourself and let them know in
+              support chat.
             </Callout>
+            <p>
+              Setting an order to <UI>Delivered</UI> emails the customer, with
+              a link to leave a review.
+            </p>
 
             <GuideH3>Mark as paid</GuideH3>
             <p>
@@ -268,13 +280,15 @@ export default function AdminGuidePage() {
               items={[
                 <>marks the payment Successful and moves a Pending order to Confirmed,</>,
                 <>reduces stock for the items,</>,
+                <>counts the use of any coupon on the order,</>,
                 <>emails the customer &ldquo;Order Confirmed&rdquo; (not for Cash on Delivery, which is already delivered by then),</>,
                 <>drops the Orders badge by one.</>,
               ]}
             />
             <Callout tone="warning" title="Only use Mark as paid once the money is really there">
               It can&apos;t be undone from the screen, and it reduces stock.
-              Don&apos;t use it on a cancelled order.
+              It isn&apos;t available on cancelled or refunded orders: set the
+              order back to Pending or Confirmed first.
             </Callout>
 
             <GuideH3>Invoice or receipt?</GuideH3>
@@ -320,7 +334,7 @@ export default function AdminGuidePage() {
                   "Deliver, collect the cash, then Mark as paid.",
                 ],
                 [
-                  "MoMo app checkout (MTN)",
+                  "MoMo app checkout (MTN, if switched on)",
                   "Approves a payment prompt on their phone.",
                   "Nothing. It confirms itself when MTN reports success.",
                 ],
@@ -486,7 +500,8 @@ export default function AdminGuidePage() {
           >
             <Bullets
               items={[
-                <>Shows the newest 100 accounts with phone, number of orders, total spent and join date.</>,
+                <>Shows the newest 100 accounts with phone, orders placed, total spent (paid orders only) and join date.</>,
+                <>Filter with <UI>Customers</UI>, <UI>Staff</UI> (sales agents and inventory managers) or <UI>Admins</UI> (including super admins).</>,
                 <>The dot beside each name is green when they&apos;re online.</>,
                 <>The <UI>Role</UI> dropdown changes someone&apos;s access (see <a href="#access" className="text-amber-600 underline">Who can use the admin</a>).</>,
               ]}
@@ -513,7 +528,7 @@ export default function AdminGuidePage() {
                 <><strong>Code</strong> is saved in capitals; each code must be unique.</>,
                 <><strong>Min Order</strong> (optional): the items total needed before discount.</>,
                 <><strong>Max Uses</strong>: leave empty for unlimited.</>,
-                <>One coupon per order.</>,
+                <>One coupon per order. A use is counted when the order is actually placed (or paid), so abandoned checkouts don&apos;t use it up.</>,
               ]}
             />
             <Callout tone="warning" title="Expiry date tip">
@@ -532,9 +547,9 @@ export default function AdminGuidePage() {
           >
             <Bullets
               items={[
-                <><strong>30-Day Revenue</strong>, <strong>Total Orders</strong>, <strong>New Customers</strong> and <strong>Customer Growth</strong> (vs last month).</>,
-                <><strong>Daily Revenue</strong> (last 14 days), <strong>Orders by Status</strong>, and <strong>Collections by Method</strong>: money actually received, split by MoMo app, MoMo Transfer and Cash on Delivery.</>,
-                <><strong>Top Selling Products</strong> by quantity.</>,
+                <><strong>30-Day Revenue</strong>: money actually received in the last 30 days, with the number of paid orders. Also <strong>Total Orders</strong>, <strong>New Customers</strong> and <strong>Customer Growth</strong> (vs last month).</>,
+                <><strong>Daily Revenue</strong> (last 14 days, by Kigali day), <strong>Orders by Status</strong>, and <strong>Collections by Method</strong>: money received, split by MoMo app, MoMo Transfer and Cash on Delivery.</>,
+                <><strong>Top Selling Products</strong> from paid orders in the last 30 days.</>,
               ]}
             />
             <GuideH3>Search</GuideH3>
@@ -592,9 +607,10 @@ export default function AdminGuidePage() {
               francs.
             </Callout>
             <Callout tone="tip" title="Which payment switches to use">
-              MoMo Transfer and Cash on Delivery need no setup beyond your MoMo
-              number. Leave Vodafone Cash and AirtelTigo Money off; they
-              aren&apos;t Rwandan networks.
+              The switches are <UI>MTN Mobile Money</UI> (automatic MoMo app
+              checkout, needs the MTN API set up), <UI>MoMo Transfer</UI> and{" "}
+              <UI>Cash on Delivery</UI>. MoMo Transfer and Cash on Delivery
+              need nothing beyond your MoMo number.
             </Callout>
 
             <GuideH3>Team</GuideH3>
@@ -638,7 +654,9 @@ export default function AdminGuidePage() {
               While an admin page is open, a pop-up with a <UI>View</UI> button
               appears for: a new MoMo transfer to verify, a new Cash on Delivery
               order, an order paid through the MoMo app, a new review, and a new
-              support message.
+              support message. Each person only gets alerts for areas they can
+              open (inventory managers don&apos;t get support alerts, for
+              example).
             </p>
             <p>
               Click the bell to turn <UI>Sound alerts</UI> on or off and set the
@@ -666,6 +684,7 @@ export default function AdminGuidePage() {
                 ["Verify MoMo transfer", "All admins", "Same moment: check the money and mark it paid."],
                 ["New order", "All admins", "A Cash on Delivery order is placed, or a MoMo app payment succeeds."],
                 ["Your order has shipped", "Customer", "You set an order to Shipped (includes tracking if entered)."],
+                ["Your order has been delivered", "Customer", "You set an order to Delivered (asks for a review)."],
                 ["Message about your order", "Customer", "You reply in support chat."],
                 ["New support message", "All admins", "A customer sends a support message."],
                 ["Welcome to Ajabu Lighting", "New customer", "They sign up."],
@@ -693,6 +712,8 @@ export default function AdminGuidePage() {
                 ["Customer didn't get an email", "Ask them to check Spam/Promotions. You can always reach them in support chat."],
                 ["An order is stuck in Pending", "It's waiting for payment. Verify the transfer or collect the cash, then Mark as paid."],
                 ["The role dropdown is greyed out", "You can't change your own role, and only a super admin can change a super admin."],
+                ["A menu item is missing, or a page sends me back to the Dashboard", "Your role doesn't include that area. Ask an admin to change your role."],
+                ["There's no Mark as paid button", "The order is Cancelled or Refunded, or already paid. Set it back to Pending or Confirmed first if the customer really paid."],
                 ["“Failed to delete product”", "It has been ordered before. Untick Active to hide it instead."],
                 ["Everyone's dot is grey", "Nobody has the site open right now. Dots update every 30 seconds."],
                 ["No pop-up for a new order", "Pop-ups only appear while an admin page is open. Check the Orders badge and your email."],
@@ -713,10 +734,8 @@ export default function AdminGuidePage() {
                 ["Product variants (sizes, colours)", "Create each variant as its own product."],
                 ["Choosing the main product photo or re-ordering photos", "Photos show in the order you uploaded them, and the first is the main one. Delete and re-upload to change the order."],
                 ["Searching or filtering the Orders list", "Use the search box at the top of the page."],
-                ["Restocking or refunding automatically on cancel/refund", "Adjust stock on the product and refund by MoMo yourself."],
-                ["Emails for Cancelled, Refunded or Delivered", "Message the customer in support chat."],
-                ["Limited staff roles (Sales agent / Inventory manager)", "Give Admin to anyone who needs to work in the admin."],
-                ["Revenue cards count orders not paid yet", "Use “Collections by Method” in Analytics for money actually received."],
+                ["Sending refunds automatically", "Refund by MoMo yourself; the order's stock is restored when you set it to Refunded."],
+                ["Emails for Cancelled or Refunded orders", "Message the customer in support chat."],
               ]}
             />
             <p className="flex items-center gap-2 text-muted-foreground">
