@@ -65,8 +65,8 @@ export function AddTeamMember({
       <CardHeader>
         <CardTitle className="text-base">Add a team member</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Search any account by name or email, then choose their role. They
-          need to have signed up on the site first.
+          Search customer accounts by name or email, then choose their role.
+          They need to have signed up on the site first.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">

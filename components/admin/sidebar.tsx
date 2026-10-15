@@ -16,6 +16,7 @@ import {
   Lightbulb,
   MessageSquare,
   Star,
+  BookOpen,
 } from "lucide-react"
 import { useAdminUnreadMessages } from "@/hooks/use-unread-messages"
 import { usePendingReviews } from "@/hooks/use-pending-reviews"
@@ -53,6 +54,7 @@ const crmNav = [
 
 const settingsNav = [
   { title: "Settings", href: "/admin/settings", icon: Settings },
+  { title: "Admin Guide", href: "/admin/guide", icon: BookOpen },
 ]
 
 export function AdminSidebar() {
