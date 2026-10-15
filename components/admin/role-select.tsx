@@ -33,11 +33,14 @@ export function RoleSelect({
   currentRole,
   isSelf = false,
   viewerIsSuperAdmin = false,
+  onChanged,
 }: {
   userId: string
   currentRole: UserRole
   isSelf?: boolean
   viewerIsSuperAdmin?: boolean
+  /** Called after the role is saved. */
+  onChanged?: (role: UserRole) => void
 }) {
   const router = useRouter()
   const [role, setRole] = useState<UserRole>(currentRole)
@@ -74,6 +77,7 @@ export function RoleSelect({
       toast.error(error.message || "Failed to update role")
     } else {
       toast.success(`Role changed to ${label(next)}`)
+      onChanged?.(next)
       router.refresh()
     }
     setSaving(false)

@@ -3,6 +3,7 @@ import { formatDate } from "@/lib/utils/format"
 import { SettingsNav } from "@/components/admin/settings-nav"
 import { RoleSelect } from "@/components/admin/role-select"
 import { OnlineDot } from "@/components/online-dot"
+import { AddTeamMember } from "@/components/admin/add-team-member"
 import {
   Table,
   TableBody,
@@ -24,6 +25,7 @@ export default async function TeamSettingsPage() {
     ? await supabase.from("profiles").select("role").eq("id", viewer.id).single()
     : { data: null }
   const viewerIsSuperAdmin = viewerProfile?.role === "super_admin"
+  const viewerIsAdmin = viewerIsSuperAdmin || viewerProfile?.role === "admin"
 
   // Staff first (any non-customer role), then everyone else.
   const { data: staff } = await supabase
@@ -43,10 +45,17 @@ export default async function TeamSettingsPage() {
 
       <SettingsNav />
 
-      <p className="text-sm text-muted-foreground">
-        Assign roles to control access. Promote a customer to a staff role from
-        the Customers page, or adjust existing staff here.
-      </p>
+      {viewerIsAdmin && (
+        <AddTeamMember viewerIsSuperAdmin={viewerIsSuperAdmin} />
+      )}
+
+      <div>
+        <h2 className="text-base font-semibold">Current team</h2>
+        <p className="text-sm text-muted-foreground">
+          Everyone with a staff role. To remove someone&apos;s access, set them
+          back to Customer. You can&apos;t change your own role.
+        </p>
+      </div>
 
       <div className="border rounded-lg">
         <Table>
