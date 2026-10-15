@@ -49,6 +49,11 @@ const TEXT_FIELDS = [
     label: "MoMo Account Name",
     placeholder: "Ajabu Lighting",
   },
+  {
+    key: "momo_ussd_code",
+    label: "MoMo USSD code (optional) — type {amount} where the order total goes",
+    placeholder: "e.g. *182*1*1*07XXXXXXXX*{amount}#",
+  },
 ] as const
 
 export default function PaymentSettingsPage() {
@@ -161,7 +166,9 @@ export default function PaymentSettingsPage() {
                 <p className="text-xs text-muted-foreground mb-3">
                   MoMo Transfer — the number customers send to when they pay by
                   manual Mobile Money transfer. Leave the number blank to hide
-                  that method.
+                  that method. The USSD code is shown at checkout exactly as
+                  typed, with Copy and (on Android) Dial buttons; leave it blank
+                  to hide it.
                 </p>
                 {TEXT_FIELDS.map((field) => (
                   <div key={field.key} className="space-y-2 mb-4">

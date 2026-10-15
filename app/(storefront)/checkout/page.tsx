@@ -94,6 +94,8 @@ export default function CheckoutPage() {
   const [momoManualEnabled, setMomoManualEnabled] = useState(true)
   const [momoManualNumber, setMomoManualNumber] = useState("")
   const [momoManualName, setMomoManualName] = useState("")
+  // Optional USSD dial string from admin settings; "{amount}" is filled in.
+  const [momoUssdCode, setMomoUssdCode] = useState("")
   const isCod = provider === COD_METHOD_VALUE
   const isMomoManual = provider === MOMO_MANUAL_VALUE
   const [momoPhone, setMomoPhone] = useState("")
@@ -155,6 +157,7 @@ export default function CheckoutPage() {
             "active_payment_providers",
             "momo_manual_number",
             "momo_manual_name",
+            "momo_ussd_code",
             "store_currency",
             ...PRICING_SETTING_KEYS,
           ]),
@@ -201,6 +204,9 @@ export default function CheckoutPage() {
           : ""
       setMomoManualNumber(manualNumber)
       setMomoManualName(manualName)
+      if (typeof settingsMap.momo_ussd_code === "string") {
+        setMomoUssdCode(settingsMap.momo_ussd_code.trim())
+      }
 
       const codOn = !active || active.includes(COD_METHOD_VALUE)
       // Manual transfer needs a configured number to be usable.
@@ -251,6 +257,11 @@ export default function CheckoutPage() {
   // cart estimate.
   const shown = orderBreakdown ?? estimate
   const amountDue = shown.total
+  // Ready-to-dial USSD string for this order (whole francs for "{amount}").
+  const ussdCode = momoUssdCode.replace(
+    /\{amount\}/g,
+    String(Math.round(amountDue)),
+  )
 
   function copyText(value: string, message: string) {
     navigator.clipboard
@@ -895,8 +906,45 @@ export default function CheckoutPage() {
                           Copy
                         </button>
                       </div>
+                      {ussdCode && (
+                        <div className="flex items-center justify-between gap-3 p-5">
+                          <div className="min-w-0">
+                            <p className="mb-1 text-[0.65rem] font-medium uppercase tracking-[0.25em] text-[#8a8478]">
+                              Or dial
+                            </p>
+                            <p className="font-mono text-lg tracking-wide text-[#f5f0e8] break-all">
+                              {ussdCode}
+                            </p>
+                            <p className="mt-1 text-xs text-[#8a8478]">
+                              On iPhone, copy it and paste it into the Phone app.
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            {/* tel: link opens the dialer pre-filled on Android
+                                (# must be encoded as %23). iOS ignores
+                                tel: links containing * or #. */}
+                            <a
+                              href={`tel:${encodeURIComponent(ussdCode)}`}
+                              className="px-3 py-2 bg-amber-500 text-black text-[0.65rem] font-medium uppercase tracking-wider hover:bg-amber-400 transition-colors"
+                            >
+                              Dial
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => copyText(ussdCode, "Code copied")}
+                              className="px-3 py-2 border border-white/10 text-[0.65rem] uppercase tracking-wider hover:border-amber-500/50 transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <ol className="p-5 text-xs text-[#8a8478] space-y-1 list-decimal list-inside">
-                        <li>Open your Mobile Money app or dial the USSD code.</li>
+                        <li>
+                          {ussdCode
+                            ? "Dial the code above, or open your Mobile Money app."
+                            : "Open your Mobile Money app or dial the USSD code."}
+                        </li>
                         <li>
                           Send exactly {formatCurrency(amountDue)} to the number
                           above.
