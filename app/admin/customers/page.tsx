@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { Badge } from "@/components/ui/badge"
 import { RoleSelect } from "@/components/admin/role-select"
+import { EagleBadge } from "@/components/role-badge"
 import { OnlineDot } from "@/components/online-dot"
 import type { UserRole } from "@/lib/types"
 import {
@@ -160,7 +161,9 @@ export default async function AdminCustomersPage({
                   {customer.phone || "—"}
                 </TableCell>
                 <TableCell>
-                  {viewerIsAdmin ? (
+                  {customer.is_eagle_admin === true ? (
+                    <EagleBadge />
+                  ) : viewerIsAdmin ? (
                     <RoleSelect
                       userId={customer.id}
                       currentRole={customer.role as UserRole}

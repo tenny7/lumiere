@@ -17,6 +17,8 @@ export interface Profile {
   email: string
   role: UserRole
   avatar_url: string | null
+  /** Site maintainer, protected from changes (migration 00020). */
+  is_eagle_admin?: boolean
   created_at: string
   updated_at: string
 }

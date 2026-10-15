@@ -30,7 +30,7 @@ export default async function TeamSettingsPage() {
 
   // Staff (any non-customer role) for the main table, and every account for
   // the sidebar. Both readable by staff via RLS.
-  const [{ data: staff }, { data: allUsers }] = await Promise.all([
+  const [{ data: staff }, { data: allUsers }, { data: eagles }] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name, email, role, created_at")
@@ -41,7 +41,11 @@ export default async function TeamSettingsPage() {
       .select("id, full_name, email, role")
       .order("created_at", { ascending: false })
       .limit(300),
+    // Eagle admin accounts (migration 00020). Before the migration runs this
+    // errors, which just means nobody is marked yet.
+    supabase.from("profiles").select("id").eq("is_eagle_admin", true),
   ])
+  const eagleIds = new Set((eagles ?? []).map((e) => e.id as string))
 
   return (
     <div className="space-y-6">
@@ -104,6 +108,7 @@ export default async function TeamSettingsPage() {
                         userId={member.id}
                         currentRole={member.role}
                         isSelf={member.id === viewer?.id}
+                        isEagle={eagleIds.has(member.id)}
                         viewerIsSuperAdmin={viewerIsSuperAdmin}
                       />
                     </TableCell>
@@ -125,7 +130,10 @@ export default async function TeamSettingsPage() {
         </div>
 
         <UserPresenceSidebar
-          users={allUsers ?? []}
+          users={(allUsers ?? []).map((u) => ({
+            ...u,
+            is_eagle_admin: eagleIds.has(u.id),
+          }))}
           viewerId={viewer?.id ?? null}
           viewerIsAdmin={viewerIsAdmin}
           viewerIsSuperAdmin={viewerIsSuperAdmin}

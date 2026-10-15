@@ -39,6 +39,7 @@ export function AdminHeader() {
   const [query, setQuery] = useState("")
   const [name, setName] = useState("Admin")
   const [role, setRole] = useState<string | null>(null)
+  const [eagle, setEagle] = useState(false)
   // Same count as the Orders sidebar badge (placed, unpaid), kept live.
   const pending = useOrdersNeedingAttention()
   const { settings: notif, update: updateNotif } = useNotificationSettings()
@@ -57,6 +58,7 @@ export function AdminHeader() {
         .single()
       if (profile) setName(profile.username || profile.full_name || "Admin")
       if (profile?.role) setRole(profile.role)
+      setEagle(profile?.is_eagle_admin === true)
     }
     load()
   }, [])
@@ -177,7 +179,7 @@ export function AdminHeader() {
               </AvatarFallback>
             </Avatar>
             <span className="text-sm hidden sm:inline">{name}</span>
-            <RoleBadge role={role} className="hidden sm:inline-flex" />
+            <RoleBadge role={role} eagle={eagle} className="hidden sm:inline-flex" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>

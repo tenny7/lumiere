@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { UserRole } from "@/lib/types"
+import { EagleBadge } from "@/components/role-badge"
 
 const ROLES: UserRole[] = [
   "customer",
@@ -27,11 +28,13 @@ const label = (r: string) => r.replace(/_/g, " ")
  * Admin control for a user's role. The database enforces the rules
  * (migration 00016): only admins change roles, nobody changes their own, and
  * only a super admin grants or removes super admin. The UI mirrors them.
+ * The Eagle admin (00020) can't be changed by anyone, so it shows a badge.
  */
 export function RoleSelect({
   userId,
   currentRole,
   isSelf = false,
+  isEagle = false,
   viewerIsSuperAdmin = false,
   onChanged,
   compact = false,
@@ -39,6 +42,8 @@ export function RoleSelect({
   userId: string
   currentRole: UserRole
   isSelf?: boolean
+  /** The site maintainer's account: never editable from the website. */
+  isEagle?: boolean
   viewerIsSuperAdmin?: boolean
   /** Called after the role is saved. */
   onChanged?: (role: UserRole) => void
@@ -48,6 +53,8 @@ export function RoleSelect({
   const router = useRouter()
   const [role, setRole] = useState<UserRole>(currentRole)
   const [saving, setSaving] = useState(false)
+
+  if (isEagle) return <EagleBadge />
 
   // Only a super admin can touch a super admin, or grant that role.
   const locked = isSelf || (role === "super_admin" && !viewerIsSuperAdmin)

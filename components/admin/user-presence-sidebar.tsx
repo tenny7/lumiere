@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { RoleSelect } from "@/components/admin/role-select"
+import { EagleBadge } from "@/components/role-badge"
 import { usePresence, isOnline, lastSeenLabel } from "@/lib/presence"
 import type { UserRole } from "@/lib/types"
 
@@ -11,6 +12,7 @@ type SidebarUser = {
   full_name: string | null
   email: string | null
   role: UserRole
+  is_eagle_admin?: boolean
 }
 
 /**
@@ -132,7 +134,9 @@ export function UserPresenceSidebar({
                 {snap.loaded ? lastSeenLabel(u.seen, snap.now) : u.email}
               </p>
             </div>
-            {viewerIsAdmin ? (
+            {u.is_eagle_admin ? (
+              <EagleBadge />
+            ) : viewerIsAdmin ? (
               <RoleSelect
                 // Remount when the role changes elsewhere (e.g. team table).
                 key={`${u.id}:${u.role}`}

@@ -37,7 +37,7 @@ export const metadata = { title: "Admin Guide — Ajabu Lighting" }
 
 const SECTIONS: GuideTocSection[] = [
   { id: "start", title: "Daily routine", keywords: "start overview checklist morning" },
-  { id: "access", title: "Who can use the admin", keywords: "roles permissions access admin super sales agent inventory manager staff" },
+  { id: "access", title: "Who can use the admin", keywords: "roles permissions access admin super eagle maintainer sales agent inventory manager staff" },
   { id: "dashboard", title: "Dashboard", keywords: "revenue today stats cards momo collected" },
   { id: "orders", title: "Orders", keywords: "status ship tracking cancel invoice receipt mark paid badge" },
   { id: "payments", title: "Payments & verifying MoMo", keywords: "momo transfer verify cash on delivery cod ussd paid" },
@@ -138,6 +138,7 @@ export default function AdminGuidePage() {
               rows={[
                 ["Customer", "No", "Shops on the site. Every new sign-up starts here."],
                 ["Admin", "Yes", "Runs the store: orders, products, customers, settings."],
+                ["Eagle admin", "Yes", "The site maintainer (website, code and database). A super admin that nobody can demote, block or delete from the website."],
                 ["Super admin", "Yes", "Everything an admin can do, plus granting or removing super admin."],
                 ["Sales agent", "Yes, limited", "Orders (incl. changing status and Mark as paid), Support, Reviews, Customers (view only)."],
                 ["Inventory manager", "Yes, limited", "Products and Categories, and viewing Orders."],
@@ -161,6 +162,11 @@ export default function AdminGuidePage() {
                   it.
                 </>,
                 <>Only a super admin can make someone a super admin, or remove it.</>,
+                <>
+                  The <UI>Eagle Admin</UI> account shows a badge instead of a
+                  role dropdown. Nobody can change it from the admin, including
+                  other super admins. It can only be changed in the database.
+                </>,
                 <>
                   These rules are enforced by the database, not just the
                   screens, so they can&apos;t be bypassed from a browser.
@@ -712,6 +718,7 @@ export default function AdminGuidePage() {
                 ["Customer didn't get an email", "Ask them to check Spam/Promotions. You can always reach them in support chat."],
                 ["An order is stuck in Pending", "It's waiting for payment. Verify the transfer or collect the cash, then Mark as paid."],
                 ["The role dropdown is greyed out", "You can't change your own role, and only a super admin can change a super admin."],
+                ["Someone shows an Eagle Admin badge instead of a role", "That's the site maintainer's account. It can't be changed or removed from the admin."],
                 ["A menu item is missing, or a page sends me back to the Dashboard", "Your role doesn't include that area. Ask an admin to change your role."],
                 ["There's no Mark as paid button", "The order is Cancelled or Refunded, or already paid. Set it back to Pending or Confirmed first if the customer really paid."],
                 ["“Failed to delete product”", "It has been ordered before. Untick Active to hide it instead."],
