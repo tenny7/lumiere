@@ -60,9 +60,25 @@ export default async function InvoicePage({
   const storeName = settingString(settings, "store_name", "Ajabu Lighting")
   const storeEmail = settingString(settings, "store_email")
   const storePhone = settingString(settings, "store_phone")
-  const storeAddr = settings.store_address as
-    | { line_1?: string; city?: string; region?: string; country?: string }
-    | undefined
+  // The General settings field saves plain text; older data stored an object
+  // ({ line_1, city, region, country }). Accept both.
+  const rawAddr = settings.store_address
+  const storeAddress =
+    typeof rawAddr === "string"
+      ? rawAddr.trim()
+      : rawAddr && typeof rawAddr === "object"
+        ? (() => {
+            const a = rawAddr as {
+              line_1?: string
+              city?: string
+              region?: string
+              country?: string
+            }
+            return [a.line_1, a.city, a.region, a.country]
+              .filter(Boolean)
+              .join(", ")
+          })()
+        : ""
 
   const currency: string = order.currency || "RWF"
   const ship = (order.shipping_address || {}) as {
@@ -119,11 +135,7 @@ export default async function InvoicePage({
     storeName,
     storeEmail,
     storePhone,
-    storeAddress: storeAddr
-      ? [storeAddr.line_1, storeAddr.city, storeAddr.region, storeAddr.country]
-          .filter(Boolean)
-          .join(", ")
-      : "",
+    storeAddress,
     docType,
     statusLabel,
     paidOn,
@@ -178,13 +190,7 @@ export default async function InvoicePage({
                 {storeName}
               </h1>
               <div className="mt-1.5 space-y-0.5 text-sm text-neutral-500">
-                {storeAddr && (
-                  <p>
-                    {[storeAddr.line_1, storeAddr.city, storeAddr.region, storeAddr.country]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                )}
+                {storeAddress && <p>{storeAddress}</p>}
                 {storeEmail && <p className="break-all">{storeEmail}</p>}
                 {storePhone && <p>{storePhone}</p>}
               </div>
