@@ -35,9 +35,8 @@ export function OnlineDot({
     return <span aria-hidden className={`inline-block h-2 w-2 ${className}`} />
   }
 
-  const seen = snap.lastSeen[userId]
-  const online = isOnline(seen, snap.now)
-  const label = lastSeenLabel(seen, snap.now)
+  const online = isOnline(snap, userId)
+  const label = lastSeenLabel(snap.lastSeen[userId], online, snap.now)
 
   return (
     <span

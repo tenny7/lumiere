@@ -42,7 +42,7 @@ export function UserPresenceSidebar({
         return {
           ...u,
           seen,
-          online: isOnline(seen, snap.now),
+          online: isOnline(snap, u.id),
           seenMs: seen ? new Date(seen).getTime() : 0,
         }
       })
@@ -64,7 +64,7 @@ export function UserPresenceSidebar({
   }, [users, snap, filter, onlineOnly])
 
   const onlineCount = snap.loaded
-    ? users.filter((u) => isOnline(snap.lastSeen[u.id], snap.now)).length
+    ? users.filter((u) => isOnline(snap, u.id)).length
     : null
 
   return (
@@ -113,8 +113,8 @@ export function UserPresenceSidebar({
         {rows.map((u) => (
           <li key={u.id} className="flex items-center gap-2.5 px-4 py-2.5">
             <span
-              title={snap.loaded ? lastSeenLabel(u.seen, snap.now) : undefined}
-              aria-label={snap.loaded ? lastSeenLabel(u.seen, snap.now) : undefined}
+              title={snap.loaded ? lastSeenLabel(u.seen, u.online, snap.now) : undefined}
+              aria-label={snap.loaded ? lastSeenLabel(u.seen, u.online, snap.now) : undefined}
               className={`h-2 w-2 shrink-0 rounded-full ${
                 !snap.loaded
                   ? "bg-transparent"
@@ -131,7 +131,7 @@ export function UserPresenceSidebar({
                 )}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {snap.loaded ? lastSeenLabel(u.seen, snap.now) : u.email}
+                {snap.loaded ? lastSeenLabel(u.seen, u.online, snap.now) : u.email}
               </p>
             </div>
             {u.is_eagle_admin ? (

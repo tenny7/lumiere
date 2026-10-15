@@ -645,7 +645,10 @@ export default function AdminGuidePage() {
             <p>
               The <UI>All users</UI> panel on the right lists everyone, online
               people first, with &ldquo;Last seen…&rdquo; for the rest. Filter
-              it, or switch to <UI>Online</UI> to see who&apos;s around.
+              it, or switch to <UI>Online</UI> to see who&apos;s around. It
+              updates live: someone turns green as soon as they open the site
+              while signed in (even in a background tab) and grey within a few
+              seconds of closing it.
             </p>
           </GuideSection>
 
@@ -731,7 +734,8 @@ export default function AdminGuidePage() {
                 ["A menu item is missing, or a page sends me back to the Dashboard", "Your role doesn't include that area. Ask an admin to change your role."],
                 ["There's no Mark as paid button", "The order is Cancelled or Refunded, or already paid. Set it back to Pending or Confirmed first if the customer really paid."],
                 ["“Failed to delete product”", "It has been ordered before. Untick Active to hide it instead."],
-                ["Everyone's dot is grey", "Nobody has the site open right now. Dots update every 30 seconds."],
+                ["Everyone's dot is grey", "Nobody signed in has the site open right now. Dots update live."],
+                ["Someone still shows online after leaving", "If their phone went to sleep or lost signal, the site can't tell they left. They go grey after about 90 seconds."],
                 ["No pop-up for a new order", "Pop-ups only appear while an admin page is open. Check the Orders badge and your email."],
               ]}
             />

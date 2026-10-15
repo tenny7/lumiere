@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 /**
  * For customers in the support chat: shows whether the store team is around.
  * Uses support_team_online(), which returns only true/false (never who).
+ * Customers can't receive staff presence events (RLS), so this polls.
  * Hidden until known, and if the presence migration isn't applied.
  */
 export function SupportTeamStatus() {
@@ -19,7 +20,7 @@ export function SupportTeamStatus() {
       if (active && !error && typeof data === "boolean") setOnline(data)
     }
     check()
-    const t = setInterval(check, 60_000)
+    const t = setInterval(check, 30_000)
     return () => {
       active = false
       clearInterval(t)
