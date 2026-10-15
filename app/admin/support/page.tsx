@@ -14,7 +14,11 @@ type Row = {
   created_at: string
   orders: {
     order_number: string
-    customer: { full_name: string | null; email: string | null } | null
+    customer: {
+      id: string
+      full_name: string | null
+      email: string | null
+    } | null
   } | null
 }
 
@@ -25,7 +29,7 @@ export default async function AdminSupportPage() {
   const { data } = await supabase
     .from("support_messages")
     .select(
-      "order_id, sender_role, body, read_at, created_at, orders(order_number, customer:profiles(full_name, email))",
+      "order_id, sender_role, body, read_at, created_at, orders(order_number, customer:profiles(id, full_name, email))",
     )
     .order("created_at", { ascending: false })
 
@@ -40,6 +44,7 @@ export default async function AdminSupportPage() {
         customer:
           r.orders?.customer?.full_name || r.orders?.customer?.email || "—",
         customerEmail: r.orders?.customer?.email || "",
+        customerId: r.orders?.customer?.id ?? null,
         lastBody: r.body,
         lastAt: r.created_at,
         unread: 0,

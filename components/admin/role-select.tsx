@@ -21,18 +21,45 @@ const ROLES: UserRole[] = [
   "super_admin",
 ]
 
+const label = (r: string) => r.replace(/_/g, " ")
+
+/**
+ * Admin control for a user's role. The database enforces the rules
+ * (migration 00016): only admins change roles, nobody changes their own, and
+ * only a super admin grants or removes super admin. The UI mirrors them.
+ */
 export function RoleSelect({
   userId,
   currentRole,
+  isSelf = false,
+  viewerIsSuperAdmin = false,
 }: {
   userId: string
   currentRole: UserRole
+  isSelf?: boolean
+  viewerIsSuperAdmin?: boolean
 }) {
   const router = useRouter()
   const [role, setRole] = useState<UserRole>(currentRole)
   const [saving, setSaving] = useState(false)
 
+  // Only a super admin can touch a super admin, or grant that role.
+  const locked = isSelf || (role === "super_admin" && !viewerIsSuperAdmin)
+  const options = viewerIsSuperAdmin
+    ? ROLES
+    : ROLES.filter((r) => r !== "super_admin")
+
   async function handleChange(next: UserRole) {
+    if (next === role) return
+    if (
+      (next === "admin" || next === "super_admin") &&
+      !window.confirm(
+        `Give this person ${label(next)} access? They'll be able to manage orders, products, customers and settings.`,
+      )
+    ) {
+      return
+    }
+
     const prev = role
     setRole(next)
     setSaving(true)
@@ -43,9 +70,10 @@ export function RoleSelect({
       .eq("id", userId)
     if (error) {
       setRole(prev)
-      toast.error("Failed to update role")
+      // The database explains why (e.g. "You cannot change your own role").
+      toast.error(error.message || "Failed to update role")
     } else {
-      toast.success("Role updated")
+      toast.success(`Role changed to ${label(next)}`)
       router.refresh()
     }
     setSaving(false)
@@ -55,15 +83,24 @@ export function RoleSelect({
     <Select
       value={role}
       onValueChange={(v) => v && handleChange(v as UserRole)}
-      disabled={saving}
+      disabled={saving || locked}
     >
-      <SelectTrigger className="w-44 h-8 text-xs">
+      <SelectTrigger
+        className="w-44 h-8 text-xs capitalize"
+        title={
+          isSelf
+            ? "You can't change your own role. Ask another admin."
+            : locked
+              ? "Only a super admin can change this role."
+              : undefined
+        }
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {ROLES.map((r) => (
+        {(options.includes(role) ? options : [...options, role]).map((r) => (
           <SelectItem key={r} value={r} className="capitalize">
-            {r.replace(/_/g, " ")}
+            {label(r)}
           </SelectItem>
         ))}
       </SelectContent>

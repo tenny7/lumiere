@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Cormorant_Garamond, Outfit } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
+import { PresenceHeartbeat } from "@/components/presence-heartbeat"
 import "./globals.css"
 
 const serif = Cormorant_Garamond({
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans">
         {children}
         <Toaster />
+        <PresenceHeartbeat />
       </body>
     </html>
   )

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, FileText } from "lucide-react"
 import { SupportThread, type SupportMessage } from "@/components/support/support-thread"
 import { SupportBlockToggle } from "@/components/admin/support-block-toggle"
+import { OnlineDot } from "@/components/online-dot"
 
 export const dynamic = "force-dynamic"
 
@@ -90,6 +91,7 @@ export default async function AdminSupportChatPage({
                 {customer?.full_name || customer?.email || "—"} ·{" "}
                 {formatCurrency(order.total, order.currency)}
               </span>
+              {customer?.id && <OnlineDot userId={customer.id} showLabel />}
               {customer?.support_blocked && (
                 <Badge variant="destructive" className="text-[0.6rem]">
                   Messaging blocked

@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { Badge } from "@/components/ui/badge"
+import { RoleSelect } from "@/components/admin/role-select"
+import { OnlineDot } from "@/components/online-dot"
+import type { UserRole } from "@/lib/types"
 import {
   Table,
   TableBody,
@@ -33,6 +36,17 @@ export default async function AdminCustomersPage({
 }) {
   const { role } = await searchParams
   const supabase = await createClient()
+
+  // Who is viewing: only admins can change roles (the database enforces it).
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser()
+  const { data: viewerProfile } = viewer
+    ? await supabase.from("profiles").select("role").eq("id", viewer.id).single()
+    : { data: null }
+  const viewerRole = viewerProfile?.role as string | undefined
+  const viewerIsAdmin = viewerRole === "admin" || viewerRole === "super_admin"
+  const viewerIsSuperAdmin = viewerRole === "super_admin"
 
   let query = supabase
     .from("profiles")
@@ -113,7 +127,10 @@ export default async function AdminCustomersPage({
             {customers.map((customer) => (
               <TableRow key={customer.id}>
                 <TableCell className="font-medium">
-                  {customer.full_name}
+                  <span className="inline-flex items-center gap-2">
+                    <OnlineDot userId={customer.id} />
+                    {customer.full_name}
+                  </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {customer.email}
@@ -122,12 +139,21 @@ export default async function AdminCustomersPage({
                   {customer.phone || "—"}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="secondary"
-                    className={`text-[0.6rem] ${roleColors[customer.role] ?? ""}`}
-                  >
-                    {roleLabels[customer.role] ?? customer.role}
-                  </Badge>
+                  {viewerIsAdmin ? (
+                    <RoleSelect
+                      userId={customer.id}
+                      currentRole={customer.role as UserRole}
+                      isSelf={customer.id === viewer?.id}
+                      viewerIsSuperAdmin={viewerIsSuperAdmin}
+                    />
+                  ) : (
+                    <Badge
+                      variant="secondary"
+                      className={`text-[0.6rem] ${roleColors[customer.role] ?? ""}`}
+                    >
+                      {roleLabels[customer.role] ?? customer.role}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   {customer.orderCount}

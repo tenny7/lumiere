@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { SupportThread, type SupportMessage } from "@/components/support/support-thread"
+import { SupportTeamStatus } from "@/components/support/support-team-status"
 
 export const dynamic = "force-dynamic"
 
@@ -68,6 +69,9 @@ export default async function OrderChatPage({
             View order details
           </Link>
         </p>
+        <div className="mb-4">
+          <SupportTeamStatus />
+        </div>
 
         <SupportThread
           orderId={order.id}

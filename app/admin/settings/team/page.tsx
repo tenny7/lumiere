@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { formatDate } from "@/lib/utils/format"
 import { SettingsNav } from "@/components/admin/settings-nav"
 import { RoleSelect } from "@/components/admin/role-select"
+import { OnlineDot } from "@/components/online-dot"
 import {
   Table,
   TableBody,
@@ -13,6 +14,16 @@ import {
 
 export default async function TeamSettingsPage() {
   const supabase = await createClient()
+
+  // The viewer can't change their own role; only a super admin manages super
+  // admins (enforced in the database by migration 00016).
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser()
+  const { data: viewerProfile } = viewer
+    ? await supabase.from("profiles").select("role").eq("id", viewer.id).single()
+    : { data: null }
+  const viewerIsSuperAdmin = viewerProfile?.role === "super_admin"
 
   // Staff first (any non-customer role), then everyone else.
   const { data: staff } = await supabase
@@ -51,7 +62,15 @@ export default async function TeamSettingsPage() {
             {staff?.map((member) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">
-                  {member.full_name}
+                  <span className="inline-flex items-center gap-2">
+                    <OnlineDot userId={member.id} />
+                    {member.full_name}
+                    {member.id === viewer?.id && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        (you)
+                      </span>
+                    )}
+                  </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {member.email}
@@ -60,7 +79,12 @@ export default async function TeamSettingsPage() {
                   {formatDate(member.created_at)}
                 </TableCell>
                 <TableCell>
-                  <RoleSelect userId={member.id} currentRole={member.role} />
+                  <RoleSelect
+                    userId={member.id}
+                    currentRole={member.role}
+                    isSelf={member.id === viewer?.id}
+                    viewerIsSuperAdmin={viewerIsSuperAdmin}
+                  />
                 </TableCell>
               </TableRow>
             ))}

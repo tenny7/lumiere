@@ -6,12 +6,14 @@ import { formatDateTime } from "@/lib/utils/format"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { MessageSquare, ArrowUpRight, Search } from "lucide-react"
+import { OnlineDot } from "@/components/online-dot"
 
 export type SupportThreadRow = {
   orderId: string
   orderNumber: string
   customer: string
   customerEmail: string
+  customerId: string | null
   lastBody: string
   lastAt: string
   unread: number
@@ -66,8 +68,9 @@ export function SupportThreadList({ threads }: { threads: SupportThreadRow[] }) 
                         <span className="font-mono text-sm font-medium">
                           {t.orderNumber}
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {t.customer}
+                        <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                          {t.customerId && <OnlineDot userId={t.customerId} />}
+                          <span className="truncate">{t.customer}</span>
                         </span>
                         {t.unread > 0 && (
                           <span className="inline-flex items-center justify-center rounded-full bg-amber-500 text-black text-[0.6rem] font-semibold px-2 py-0.5">
