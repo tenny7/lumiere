@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { ordersToKeep } from "@/lib/utils/order-expiry"
 
 export const dynamic = "force-dynamic"
 
 // Cancel abandoned checkouts: orders left `pending` (created at "Continue to
-// Payment") for more than STALE_HOURS with no successful payment. They never
-// became real orders — no confirmation email, no stock decrement — so cancelling
-// keeps the orders table tidy without touching paid/confirmed orders.
+// Payment") for more than STALE_HOURS that were never placed or paid. Orders
+// awaiting the store (Cash on Delivery, MoMo transfer) are kept — see below.
 //
 // Secured for Vercel Cron: set CRON_SECRET in the project env and Vercel sends
 // it as `Authorization: Bearer <CRON_SECRET>`.
@@ -33,14 +33,13 @@ export async function GET(request: Request) {
   const ids = (candidates || []).map((o) => o.id)
   if (ids.length === 0) return NextResponse.json({ cancelled: 0 })
 
-  // Never cancel anything that actually got paid.
-  const { data: paid } = await db
+  // Keep paid orders and orders waiting on the store (COD / MoMo transfer).
+  const { data: payments } = await db
     .from("payments")
-    .select("order_id")
+    .select("order_id, status, provider")
     .in("order_id", ids)
-    .eq("status", "successful")
-  const paidSet = new Set((paid || []).map((p) => p.order_id))
-  const toCancel = ids.filter((id) => !paidSet.has(id))
+  const keep = ordersToKeep(payments || [])
+  const toCancel = ids.filter((id) => !keep.has(id))
   if (toCancel.length === 0) return NextResponse.json({ cancelled: 0 })
 
   const { error: updateError } = await db
