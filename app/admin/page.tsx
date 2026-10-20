@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   ORDER_STATUS_LABELS,
   MOMO_PROVIDERS,
@@ -19,6 +20,7 @@ import {
   TrendingUp,
   ArrowUpRight,
   Wallet,
+  Info,
 } from "lucide-react"
 
 // Always render on request so "today" reflects the actual current day and the
@@ -262,45 +264,66 @@ export default async function AdminDashboard() {
 
       {/* Mobile Money received — from our own successful payments (MoMo app
           checkout + verified MoMo transfers). A reconciliation figure, not the
-          live MoMo wallet balance. Admins only. */}
+          live MoMo wallet balance; the details sit behind the info button so
+          the card stays short. Phones: one row per figure; wider: 3 columns.
+          Admins only. */}
       {showFinance && (
-        <Card
-          className="dash-rise"
-          style={{ "--i": 5 } as React.CSSProperties}
-        >
-          <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-                <Wallet className="h-5 w-5" />
+        <Card className="dash-rise" style={{ "--i": 5 } as React.CSSProperties}>
+          <CardContent className="p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                <Wallet className="h-4 w-4" />
               </span>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Mobile Money received
-                </p>
-                <p className="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums">
-                  {formatCurrency(momoCollectedTotal)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {momoPaymentsCount} successful Mobile Money payment
-                  {momoPaymentsCount === 1 ? "" : "s"}
-                </p>
-                <p className="mt-0.5 text-xs text-emerald-600">
-                  ≈ {formatCurrency(momoCollectedNet)} net (after MTN&apos;s 2.36% fee on
-                  MoMo app payments)
-                </p>
-              </div>
+              <h2 className="flex-1 text-sm font-medium">Mobile Money</h2>
+              <Popover>
+                <PopoverTrigger
+                  aria-label="About these figures"
+                  className="rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <Info className="h-4 w-4" />
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 text-xs leading-relaxed">
+                  <p>
+                    Confirmed MoMo app and MoMo transfer payments. This
+                    isn&apos;t your live MoMo wallet balance.
+                  </p>
+                  <p className="text-muted-foreground">
+                    After fees: MTN keeps 2.36% of MoMo app payments.
+                    Transfers to your number arrive in full.
+                  </p>
+                </PopoverContent>
+              </Popover>
             </div>
-            <div className="sm:text-right">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Collected today
-              </p>
-              <p className="mt-0.5 text-lg font-semibold tracking-tight tabular-nums">
-                {formatCurrency(momoCollectedToday)}
-              </p>
-              <p className="text-[0.7rem] text-muted-foreground">
-                From confirmed payments — not the live MoMo wallet balance.
-              </p>
-            </div>
+            <dl className="grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              {[
+                {
+                  label: "Received",
+                  value: momoCollectedTotal,
+                  note: `${momoPaymentsCount} payment${momoPaymentsCount === 1 ? "" : "s"}`,
+                },
+                { label: "After fees", value: momoCollectedNet, accent: true },
+                { label: "Today", value: momoCollectedToday },
+              ].map((f) => (
+                <div
+                  key={f.label}
+                  className="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:px-5 sm:py-0 sm:first:pl-0 sm:last:pr-0"
+                >
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {f.label}
+                  </dt>
+                  <dd className="text-right sm:mt-1 sm:text-left">
+                    <span
+                      className={`text-lg font-semibold tracking-tight tabular-nums sm:text-2xl ${f.accent ? "text-emerald-600" : ""}`}
+                    >
+                      {formatCurrency(f.value)}
+                    </span>
+                    {f.note && (
+                      <span className="block text-xs text-muted-foreground">{f.note}</span>
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </CardContent>
         </Card>
       )}
