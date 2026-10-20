@@ -165,6 +165,12 @@ export default function AdminGuidePage() {
                 </>,
                 <>Only a super admin can make someone a super admin, or remove it.</>,
                 <>
+                  A super admin&apos;s account can only be changed by another
+                  super admin. Admins, sales agents and inventory managers
+                  can&apos;t change their role, block their messaging or delete
+                  their account.
+                </>,
+                <>
                   The <UI>Eagle Admin</UI> account shows a badge instead of a
                   role dropdown. Nobody can change it from the admin, including
                   other super admins. It can only be changed in the database.
