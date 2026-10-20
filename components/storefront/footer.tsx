@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { getSocialLinks } from "@/lib/utils/settings"
+import { getContent } from "@/lib/content/server"
 import { SocialLinkList } from "@/components/storefront/social-links"
 
 const footerLinks = {
@@ -28,7 +29,11 @@ const footerLinks = {
 }
 
 export async function Footer() {
-  const socialLinks = await getSocialLinks()
+  // Description: Admin → Content → Footer. Social links: Settings.
+  const [socialLinks, content] = await Promise.all([
+    getSocialLinks(),
+    getContent("footer"),
+  ])
 
   return (
     <footer className="border-t border-white/5 bg-black">
@@ -42,10 +47,11 @@ export async function Footer() {
             >
               AJABU <span className="text-amber">LIGHTING</span>
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px]">
-              Curated lighting for spaces that deserve to shine. Handpicked
-              fixtures from artisan makers.
-            </p>
+            {content.blurb && (
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] whitespace-pre-line">
+                {content.blurb}
+              </p>
+            )}
             <SocialLinkList links={socialLinks} className="mt-5" />
           </div>
 

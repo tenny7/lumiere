@@ -6,6 +6,7 @@ import {
   Boxes,
   CircleHelp,
   CreditCard,
+  FileText,
   FolderTree,
   LayoutDashboard,
   Mail,
@@ -50,6 +51,7 @@ const SECTIONS: GuideTocSection[] = [
   { id: "analytics", title: "Analytics & search", keywords: "charts revenue top products search" },
   { id: "activity", title: "Activity feed", keywords: "log history crm audit" },
   { id: "settings", title: "Settings", keywords: "store delivery fee vat momo number ussd payment methods team social media whatsapp instagram facebook" },
+  { id: "content", title: "Website content", keywords: "content text home page hero heading story about contact showroom faq shipping returns policy testimonials newsletter footer edit placeholders" },
   { id: "notifications", title: "Notifications & sounds", keywords: "bell badge sound volume toast alerts" },
   { id: "emails", title: "Emails the store sends", keywords: "email confirmation shipped notice" },
   { id: "faq", title: "Troubleshooting", keywords: "help problem faq stuck spam" },
@@ -441,6 +443,7 @@ export default function AdminGuidePage() {
               items={[
                 <><strong>Pending approval</strong>: new reviews. <UI>Approve</UI> publishes one on the product page.</>,
                 <><strong>Published</strong>: live reviews. <UI>Hide</UI> moves one back to pending.</>,
+                <>Approved reviews with written text can also appear as testimonials on the home page (see <a href="#content" className="text-amber-600 underline">Website content</a>).</>,
                 <><UI>Delete</UI> removes a review permanently.</>,
               ]}
             />
@@ -652,6 +655,80 @@ export default function AdminGuidePage() {
             </p>
           </GuideSection>
 
+          {/* ───────────────────────── Website content ───────────────────────── */}
+          <GuideSection
+            id="content"
+            icon={FileText}
+            title="Website content"
+            summary="Edit the text customers see, page by page."
+          >
+            <p>
+              <UI>Content</UI> in the sidebar (under Website) lists every part
+              of the site you can edit. Click the arrow next to it to see the
+              pages, or open Content for an overview. Only admins can edit
+              content.
+            </p>
+            <InfoTable
+              head={["Page", "What you can change"]}
+              rows={[
+                ["Home page", "The small heading, the main heading (“Light That Lives”) and subheading, button text, the scrolling banner, section titles."],
+                ["Store promises", "The warranty, delivery, returns and support boxes: icon, title and text. Add, remove or reorder them."],
+                ["Testimonials", "Show or hide them, how many, minimum stars, and whether to show first names."],
+                ["Newsletter", "The sign-up box, the welcome email, sending a newsletter, and the subscriber list."],
+                ["Our Story, Sustainability, Careers", "Headings and text."],
+                ["Contact & Showroom", "Email, phone, showroom address, opening hours and a map link."],
+                ["Shipping & Returns, FAQ, Installation, Designers", "Headings, and lists you can add to, remove from and reorder."],
+                ["Privacy Policy, Terms of Service", "The “Last updated” line and each section."],
+                ["Footer", "The description under the logo on every page."],
+              ]}
+            />
+            <Steps
+              items={[
+                <>Open the page in <UI>Content</UI> and change the text.</>,
+                <>Click <UI>Save</UI>. Customers see it the next time they open the page.</>,
+                <><UI>View on site</UI> opens the page so you can check it.</>,
+              ]}
+            />
+            <Bullets
+              items={[
+                <><UI>Discard changes</UI> undoes what you haven&apos;t saved. <UI>Restore original text</UI> puts the starting text back in the form (it goes live only when you Save).</>,
+                <>Leave an empty line between paragraphs. Leaving a heading empty hides it; removing every item in a list hides that part of the page.</>,
+              ]}
+            />
+            <Callout tone="tip" title="Placeholders keep details in step">
+              Type <code>{"{free_delivery_threshold}"}</code>,{" "}
+              <code>{"{delivery_fee}"}</code>, <code>{"{store_email}"}</code>,{" "}
+              <code>{"{store_phone}"}</code>, <code>{"{store_address}"}</code> or{" "}
+              <code>{"{store_name}"}</code> and the site fills in the current
+              value from Settings. Change the delivery fee once in Settings and
+              every page that mentions it updates.
+            </Callout>
+
+            <GuideH3>Testimonials</GuideH3>
+            <p>
+              Testimonials are real customer reviews: the newest{" "}
+              <strong>approved</strong> reviews that have written text and at
+              least the number of stars you choose. To add one, approve it in{" "}
+              <UI>Reviews</UI>; to remove one, hide it there. If none match,
+              the section doesn&apos;t appear. Names are shown as
+              &ldquo;Verified customer&rdquo; unless you turn names on.
+            </p>
+
+            <GuideH3>Newsletter</GuideH3>
+            <Bullets
+              items={[
+                <>New subscribers get the welcome email once, with an unsubscribe link.</>,
+                <>To send a newsletter: write a subject and message, click <UI>Send a test to me</UI>, check it, then <UI>Send</UI>. Every email has an unsubscribe link.</>,
+                <>The subscriber list shows everyone who signed up. <UI>Export CSV</UI> downloads the subscribed emails; <UI>Unsubscribe</UI> stops someone receiving it (and can be undone).</>,
+              ]}
+            />
+            <Callout tone="warning" title="Sending limit">
+              Store emails go through Gmail, which allows about 500 a day.
+              Sending is limited to 250 subscribers at a time; a bigger list
+              needs a newsletter service.
+            </Callout>
+          </GuideSection>
+
           {/* ───────────────────────── Notifications ───────────────────────── */}
           <GuideSection
             id="notifications"
@@ -703,6 +780,8 @@ export default function AdminGuidePage() {
                 ["New order", "All admins", "A Cash on Delivery order is placed, or a MoMo app payment succeeds."],
                 ["Your order has shipped", "Customer", "You set an order to Shipped (includes tracking if entered)."],
                 ["Your order has been delivered", "Customer", "You set an order to Delivered (asks for a review)."],
+                ["Newsletter welcome", "New subscriber", "Someone signs up in the newsletter box (once per person). Text: Content → Newsletter."],
+                ["Your newsletter", "All subscribers", "You click Send in Content → Newsletter."],
                 ["Message about your order", "Customer", "You reply in support chat."],
                 ["New support message", "All admins", "A customer sends a support message."],
                 ["Welcome to Ajabu Lighting", "New customer", "They sign up."],

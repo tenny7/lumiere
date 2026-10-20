@@ -1,24 +1,21 @@
-import { STORE_EMAIL } from "@/lib/utils/constants"
+import { getContent } from "@/lib/content/server"
+import { PageHeading, Paragraphs } from "@/components/storefront/content-blocks"
 
-export default function CareersPage() {
+// Text: Admin → Content → Careers.
+export default async function CareersPage() {
+  const c = await getContent("careers")
   return (
     <div className="pt-24 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
-          Join Us
-        </p>
-        <h1 className="font-serif text-4xl lg:text-5xl font-light mb-8">
-          Careers at Ajabu Lighting
-        </h1>
-        <p className="text-[#c4bdb0] leading-relaxed mb-6">
-          We&apos;re always looking for passionate people to join our growing team
-          in Kigali. If you love design, technology, and creating exceptional
-          customer experiences, we&apos;d love to hear from you.
-        </p>
-        <p className="text-sm text-[#8a8478]">
-          No open positions at the moment. Send your CV to {STORE_EMAIL}
-          and we&apos;ll keep it on file.
-        </p>
+        <PageHeading eyebrow={c.eyebrow} title={c.title} />
+        <div className="space-y-6 text-[#c4bdb0] leading-relaxed mb-6">
+          <Paragraphs text={c.body} />
+        </div>
+        {c.note && (
+          <div className="space-y-3 text-sm text-[#8a8478]">
+            <Paragraphs text={c.note} />
+          </div>
+        )}
       </div>
     </div>
   )

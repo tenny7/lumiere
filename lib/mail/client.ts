@@ -42,15 +42,18 @@ type SendMailArgs = {
   html: string
   from?: string
   replyTo?: string
+  /** Extra headers, e.g. List-Unsubscribe for newsletters. */
+  headers?: Record<string, string>
 }
 
 /** Send an HTML email via SMTP. Drop-in replacement for the old Resend call. */
-export async function sendMail({ to, subject, html, from, replyTo }: SendMailArgs) {
+export async function sendMail({ to, subject, html, from, replyTo, headers }: SendMailArgs) {
   return getTransporter().sendMail({
     from: from || EMAIL_FROM,
     replyTo: replyTo || EMAIL_REPLY_TO,
     to,
     subject,
     html,
+    headers,
   })
 }

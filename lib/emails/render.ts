@@ -245,3 +245,49 @@ export function renderWelcomeEmail(props: {
 </body>
 </html>`
 }
+
+/**
+ * Newsletter and newsletter welcome emails (Admin → Content → Newsletter).
+ * The message is plain text from the admin: escaped here, paragraphs split
+ * on blank lines. Every email carries an unsubscribe link.
+ */
+export function renderNewsletterEmail(props: {
+  title: string
+  message: string
+  unsubscribeUrl: string
+  appUrl: string
+}): string {
+  const { title, message, unsubscribeUrl, appUrl } = props
+  const paragraphs = message
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map(
+      (p) =>
+        `<p style="font-size:15px;line-height:24px;color:#a8a294;margin:0 0 16px 0">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`,
+    )
+    .join("")
+  return `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background-color:#0a0a08;color:#f5f0e8">
+<div style="max-width:600px;margin:0 auto;padding:40px 20px">
+<div style="background-color:#141410;border-radius:8px;overflow:hidden">
+  <div style="padding:32px 40px;border-bottom:1px solid #2a2a24;text-align:center">
+    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">AJABU LIGHTING</h1>
+  </div>
+  <div style="padding:40px">
+    <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 16px 0">${escapeHtml(title)}</h2>
+    ${paragraphs}
+    <div style="text-align:center;margin:28px 0 8px 0">
+      <a href="${escapeHtml(appUrl)}/products" style="display:inline-block;padding:14px 32px;background-color:#c9a96e;color:#0a0a08;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border-radius:4px">Visit the shop</a>
+    </div>
+  </div>
+  <div style="padding:24px 40px;border-top:1px solid #2a2a24;text-align:center">
+    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">You're receiving this because you subscribed on our website.<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:#8a8478">Unsubscribe</a><br>&copy; ${new Date().getFullYear()} Ajabu Lighting &middot; Kigali, Rwanda</p>
+  </div>
+</div>
+</div>
+</body>
+</html>`
+}

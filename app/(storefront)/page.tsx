@@ -1,6 +1,9 @@
 import Link from "next/link"
-import { ArrowRight, Truck, Shield, RotateCcw, Headphones, Lightbulb } from "lucide-react"
+import { ArrowRight, Lightbulb, Star } from "lucide-react"
 import { NewsletterForm } from "@/components/storefront/newsletter-form"
+import { getContent } from "@/lib/content/server"
+import { getTestimonials, type Testimonial } from "@/lib/content/testimonials"
+import { CONTENT_ICONS } from "@/lib/content/icons"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { formatCurrency } from "@/lib/utils/format"
@@ -24,12 +27,12 @@ type ShopCategory = {
   count: number
 }
 
-const services = [
-  { icon: Shield, title: "5-Year Warranty", desc: "Every fixture protected against defects" },
-  { icon: Truck, title: "Free Delivery", desc: "On all orders over RWF 50,000" },
-  { icon: RotateCcw, title: "Easy Returns", desc: "90 days to decide, free return shipping" },
-  { icon: Headphones, title: "Expert Support", desc: "Real designers, available 7 days a week" },
-]
+// Store promises: two per row on phones, all in one row from lg (max 4).
+const PROMISE_COLS: Record<number, string> = {
+  1: "lg:grid-cols-1",
+  2: "lg:grid-cols-2",
+  3: "lg:grid-cols-3",
+}
 
 type FeaturedProduct = {
   id: string
@@ -43,7 +46,19 @@ type FeaturedProduct = {
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const storeCurrency = await getStoreCurrency()
+  // Text: Admin → Content (Home page, Store promises, Testimonials, Newsletter).
+  const [storeCurrency, home, promises, testimonialSettings, newsletter] =
+    await Promise.all([
+      getStoreCurrency(),
+      getContent("home"),
+      getContent("promises"),
+      getContent("testimonials"),
+      getContent("newsletter"),
+    ])
+  // Only approved reviews (lib/content/testimonials.ts).
+  const testimonials = testimonialSettings.show
+    ? await getTestimonials(testimonialSettings)
+    : []
 
   // Real featured products (fall back to newest active products)
   let { data: featuredProducts } = await supabase
@@ -109,52 +124,46 @@ export default async function HomePage() {
         </div>
 
         <div className="text-center relative z-10">
-          <p className="text-[0.7rem] font-medium tracking-[0.4em] uppercase text-amber-400 mb-8 animate-fade-in">
-            Spring Collection 2026
-          </p>
+          {home.eyebrow && (
+            <p className="text-[0.7rem] font-medium tracking-[0.4em] uppercase text-amber-400 mb-8 animate-fade-in">
+              {home.eyebrow}
+            </p>
+          )}
           <h1 className="font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-light leading-[0.95] tracking-tight mb-8">
-            Light That
-            <br />
-            <em className="italic text-amber-400">Lives</em>
+            {home.titleLine1}
+            {home.titleLine1 && home.titleHighlight && <br />}
+            {home.titleHighlight && (
+              <em className="italic text-amber-400">{home.titleHighlight}</em>
+            )}
           </h1>
-          <p className="text-base font-extralight text-[#8a8478] max-w-md mx-auto mb-10 leading-relaxed">
-            Handpicked fixtures that transform your space from simply lit to
-            truly luminous.
-          </p>
+          {home.subtitle && (
+            <p className="text-base font-extralight text-[#8a8478] max-w-md mx-auto mb-10 leading-relaxed">
+              {home.subtitle}
+            </p>
+          )}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/products"
               className="px-8 py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
             >
-              Explore Collection
+              {home.primaryButton || "Explore Collection"}
             </Link>
             <Link
               href="/about"
               className="px-8 py-3.5 border border-white/10 text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 hover:bg-amber-500/5 transition-all"
             >
-              Our Story
+              {home.secondaryButton || "Our Story"}
             </Link>
           </div>
         </div>
       </section>
 
       {/* ═══ MARQUEE ═══ */}
+      {home.marquee.length > 0 && (
       <div className="py-3.5 border-y border-white/5 overflow-hidden">
         <div className="flex gap-12 animate-marquee whitespace-nowrap">
-          {[
-            "Free Shipping Over RWF 50,000",
-            "Handcrafted Artisan Fixtures",
-            "Smart Home Compatible",
-            "5-Year Warranty",
-            "Expert Lighting Consultation",
-            "Carbon-Neutral Delivery",
-            "Free Shipping Over RWF 50,000",
-            "Handcrafted Artisan Fixtures",
-            "Smart Home Compatible",
-            "5-Year Warranty",
-            "Expert Lighting Consultation",
-            "Carbon-Neutral Delivery",
-          ].map((text, i) => (
+          {/* Listed twice so the scroll loops seamlessly. */}
+          {[...home.marquee, ...home.marquee].map((text, i) => (
             <span
               key={i}
               className="text-[0.65rem] tracking-[0.25em] uppercase text-[#8a8478] flex items-center gap-12"
@@ -165,23 +174,26 @@ export default async function HomePage() {
           ))}
         </div>
       </div>
+      )}
 
       {/* ═══ CATEGORIES ═══ */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
-              Shop by Category
-            </p>
+            {home.categoriesEyebrow && (
+              <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
+                {home.categoriesEyebrow}
+              </p>
+            )}
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-light">
-              Find Your Light
+              {home.categoriesTitle}
             </h2>
           </div>
           <Link
             href="/products"
             className="hidden sm:flex items-center gap-2 text-[0.72rem] tracking-[0.15em] uppercase text-[#8a8478] hover:text-amber-400 transition-colors group"
           >
-            All Categories
+            {home.categoriesLink || "All Categories"}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
@@ -231,18 +243,20 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 lg:pb-28">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
-              Editor&apos;s Picks
-            </p>
+            {home.featuredEyebrow && (
+              <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
+                {home.featuredEyebrow}
+              </p>
+            )}
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-light">
-              Curated for You
+              {home.featuredTitle}
             </h2>
           </div>
           <Link
             href="/products"
             className="hidden sm:flex items-center gap-2 text-[0.72rem] tracking-[0.15em] uppercase text-[#8a8478] hover:text-amber-400 transition-colors group"
           >
-            View All
+            {home.featuredLink || "View All"}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
@@ -301,57 +315,135 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ═══ TESTIMONIAL ═══ */}
-      <section className="py-16 lg:py-24 border-y border-white/5 text-center px-4">
-        <blockquote className="max-w-3xl mx-auto">
-          <span className="block font-serif text-4xl text-amber-400 mb-4">
-            &ldquo;
-          </span>
-          <p className="font-serif text-xl sm:text-2xl lg:text-3xl font-light italic leading-relaxed text-[#e8e0d0] mb-8">
-            The Cascade Trio completely transformed our dining room. It&apos;s
-            not just a light — it&apos;s the centerpiece of every dinner party
-            now.
-          </p>
-          <cite className="text-[0.72rem] tracking-[0.2em] uppercase text-[#8a8478] not-italic">
-            <strong className="text-[#f5f0e8] font-medium">Sarah Chen</strong>{" "}
-            — Interior Designer, Kigali
-          </cite>
-        </blockquote>
-      </section>
-
-      {/* ═══ SERVICES ═══ */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 border-b border-white/5">
-        {services.map((service) => (
-          <div
-            key={service.title}
-            className="p-6 lg:p-8 text-center border-r border-white/5 last:border-r-0 hover:bg-[#1a1918] transition-colors"
-          >
-            <service.icon
-              className="w-6 h-6 mx-auto mb-4 text-amber-400"
-              strokeWidth={1.2}
-            />
-            <h4 className="font-serif text-sm mb-1.5">{service.title}</h4>
-            <p className="text-[0.7rem] text-[#8a8478] leading-relaxed">
-              {service.desc}
+      {/* ═══ TESTIMONIALS (approved reviews) ═══ */}
+      {testimonials.length > 0 && (
+        <section className="py-16 lg:py-24 border-y border-white/5 px-4">
+          {testimonialSettings.heading && (
+            <p className="text-center text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-10">
+              {testimonialSettings.heading}
             </p>
-          </div>
-        ))}
-      </section>
+          )}
+          {testimonials.length === 1 ? (
+            <TestimonialQuote t={testimonials[0]} />
+          ) : (
+            <div
+              className={`max-w-6xl mx-auto grid gap-6 md:grid-cols-2 ${testimonials.length >= 3 ? "lg:grid-cols-3" : ""}`}
+            >
+              {testimonials.map((t) => (
+                <TestimonialCard key={t.id} t={t} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ═══ STORE PROMISES ═══ */}
+      {promises.items.length > 0 && (
+        <section
+          className={`grid grid-cols-2 ${PROMISE_COLS[promises.items.length] ?? "lg:grid-cols-4"} border-b border-white/5`}
+        >
+          {promises.items.map((item, i) => {
+            const Icon = CONTENT_ICONS[item.icon as keyof typeof CONTENT_ICONS]?.Icon ?? Lightbulb
+            return (
+              <div
+                key={i}
+                className="p-6 lg:p-8 text-center border-r border-white/5 last:border-r-0 hover:bg-[#1a1918] transition-colors"
+              >
+                <Icon className="w-6 h-6 mx-auto mb-4 text-amber-400" strokeWidth={1.2} />
+                <h4 className="font-serif text-sm mb-1.5">{item.title}</h4>
+                <p className="text-[0.7rem] text-[#8a8478] leading-relaxed">{item.text}</p>
+              </div>
+            )
+          })}
+        </section>
+      )}
 
       {/* ═══ NEWSLETTER ═══ */}
       <section className="py-16 lg:py-24 text-center px-4 relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[250px] bg-gradient-radial from-amber-500/[0.04] to-transparent pointer-events-none" />
-        <h2 className="font-serif text-2xl sm:text-3xl font-light mb-3 relative">
-          Stay in the Light
-        </h2>
-        <p className="text-sm font-extralight text-[#8a8478] mb-8 relative">
-          New arrivals, design inspiration, and exclusive offers — delivered
-          weekly.
-        </p>
+        {newsletter.title && (
+          <h2 className="font-serif text-2xl sm:text-3xl font-light mb-3 relative">
+            {newsletter.title}
+          </h2>
+        )}
+        {newsletter.subtitle && (
+          <p className="text-sm font-extralight text-[#8a8478] mb-8 relative">
+            {newsletter.subtitle}
+          </p>
+        )}
         <div className="relative">
-          <NewsletterForm />
+          <NewsletterForm
+            buttonLabel={newsletter.buttonLabel || "Subscribe"}
+            successMessage={newsletter.successMessage}
+          />
         </div>
       </section>
     </>
+  )
+}
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="flex justify-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <Star
+          key={i}
+          aria-hidden
+          className={`h-3.5 w-3.5 ${i < rating ? "fill-amber-400 text-amber-400" : "text-white/15"}`}
+        />
+      ))}
+    </div>
+  )
+}
+
+function Attribution({ t }: { t: Testimonial }) {
+  return (
+    <cite className="text-[0.72rem] tracking-[0.2em] uppercase text-[#8a8478] not-italic">
+      <strong className="text-[#f5f0e8] font-medium">{t.author}</strong>
+      {t.productName && (
+        <>
+          {" — "}
+          {t.productSlug ? (
+            <Link href={`/products/${t.productSlug}`} className="hover:text-amber-400">
+              {t.productName}
+            </Link>
+          ) : (
+            t.productName
+          )}
+        </>
+      )}
+    </cite>
+  )
+}
+
+/** One testimonial: the large centred quote. */
+function TestimonialQuote({ t }: { t: Testimonial }) {
+  return (
+    <blockquote className="max-w-3xl mx-auto text-center">
+      <span className="block font-serif text-4xl text-amber-400 mb-4">&ldquo;</span>
+      <p className="font-serif text-xl sm:text-2xl lg:text-3xl font-light italic leading-relaxed text-[#e8e0d0] mb-6 whitespace-pre-line">
+        {t.body}
+      </p>
+      <div className="mb-4">
+        <Stars rating={t.rating} />
+      </div>
+      <Attribution t={t} />
+    </blockquote>
+  )
+}
+
+/** Several testimonials: one card each. */
+function TestimonialCard({ t }: { t: Testimonial }) {
+  return (
+    <blockquote className="border border-white/[0.06] p-6 lg:p-8 flex flex-col text-center">
+      <span className="block font-serif text-3xl text-amber-400 mb-2">&ldquo;</span>
+      <p className="font-serif text-lg font-light italic leading-relaxed text-[#e8e0d0] mb-6 flex-1 whitespace-pre-line line-clamp-[8]">
+        {t.body}
+      </p>
+      <div className="mb-3">
+        <Stars rating={t.rating} />
+      </div>
+      <Attribution t={t} />
+    </blockquote>
   )
 }

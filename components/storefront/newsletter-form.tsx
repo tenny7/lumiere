@@ -3,7 +3,14 @@
 import { useState } from "react"
 import { toast } from "sonner"
 
-export function NewsletterForm() {
+// Button and success text: Admin → Content → Newsletter.
+export function NewsletterForm({
+  buttonLabel = "Subscribe",
+  successMessage = "You're subscribed — welcome to Ajabu Lighting.",
+}: {
+  buttonLabel?: string
+  successMessage?: string
+}) {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
@@ -23,7 +30,7 @@ export function NewsletterForm() {
       } else {
         setSubscribed(true)
         setEmail("")
-        toast.success("You're subscribed — welcome to Ajabu Lighting.")
+        toast.success(successMessage)
       }
     } catch {
       toast.error("Something went wrong. Please try again.")
@@ -42,6 +49,7 @@ export function NewsletterForm() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Your email address"
+        aria-label="Your email address"
         className="flex-1 px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478] outline-none focus:border-amber-500 transition-colors"
       />
       <button
@@ -49,7 +57,7 @@ export function NewsletterForm() {
         disabled={loading || subscribed}
         className="px-6 py-3 bg-amber-500 text-black text-[0.7rem] font-medium tracking-[0.15em] uppercase hover:bg-amber-400 transition-colors disabled:opacity-50"
       >
-        {loading ? "..." : subscribed ? "Subscribed" : "Subscribe"}
+        {loading ? "..." : subscribed ? "Subscribed" : buttonLabel}
       </button>
     </form>
   )

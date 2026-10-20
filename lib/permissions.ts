@@ -11,7 +11,8 @@
 // catalog                  ✓            —              ✓   products, categories
 // finance                  ✓            —              —   revenue figures
 // coupons, analytics,
-// activity, settings       ✓            —              —
+// activity, settings,
+// content                  ✓            —              —   website text, newsletter
 
 export type StaffArea =
   | "dashboard"
@@ -28,6 +29,7 @@ export type StaffArea =
   | "analytics"
   | "activity"
   | "settings"
+  | "content"
 
 const ALL: StaffArea[] = [
   "dashboard",
@@ -44,6 +46,7 @@ const ALL: StaffArea[] = [
   "analytics",
   "activity",
   "settings",
+  "content",
 ]
 
 const ROLE_AREAS: Record<string, readonly StaffArea[]> = {
@@ -90,6 +93,7 @@ export function areaForAdminPath(pathname: string): StaffArea {
     ["/admin/analytics", "analytics"],
     ["/admin/crm", "activity"],
     ["/admin/settings", "settings"],
+    ["/admin/content", "content"],
     ["/admin/guide", "guide"],
     ["/admin/search", "search"],
   ]

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -17,11 +17,14 @@ import {
   MessageSquare,
   Star,
   BookOpen,
+  FileText,
+  ChevronRight,
 } from "lucide-react"
 import { useAdminUnreadMessages } from "@/hooks/use-unread-messages"
 import { usePendingReviews } from "@/hooks/use-pending-reviews"
 import { useOrdersNeedingAttention } from "@/hooks/use-orders-needing-attention"
 import { can, type StaffArea } from "@/lib/permissions"
+import { CONTENT_GROUPS, CONTENT_SECTIONS } from "@/lib/content/sections"
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +34,10 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuAction,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarHeader,
   SidebarFooter,
   SidebarSeparator,
@@ -76,6 +83,10 @@ export function AdminSidebar({ role }: { role: string | null }) {
   const pendingReviews = usePendingReviews()
   const ordersNeedingAttention = useOrdersNeedingAttention()
   const { setOpenMobile } = useSidebar()
+  // Content sub-links: open on content pages, or when toggled.
+  const onContent = pathname.startsWith("/admin/content")
+  const [contentToggled, setContentToggled] = useState<boolean | null>(null)
+  const contentOpen = contentToggled ?? onContent
 
   // Close the mobile sidebar after navigating to a new page.
   useEffect(() => {
@@ -140,6 +151,61 @@ export function AdminSidebar({ role }: { role: string | null }) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {can(role, "content") && (
+          <>
+            <SidebarSeparator />
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Website</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      render={<Link href="/admin/content" />}
+                      isActive={pathname === "/admin/content"}
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Content</span>
+                    </SidebarMenuButton>
+                    <SidebarMenuAction
+                      onClick={() => setContentToggled(!contentOpen)}
+                      aria-expanded={contentOpen}
+                      aria-label={contentOpen ? "Hide content pages" : "Show content pages"}
+                    >
+                      <ChevronRight
+                        className={`transition-transform ${contentOpen ? "rotate-90" : ""}`}
+                      />
+                    </SidebarMenuAction>
+                    {contentOpen && (
+                      <SidebarMenuSub>
+                        {CONTENT_GROUPS.map((group) => (
+                          <li key={group} className="contents">
+                            <span className="px-2 pt-2 text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground first:pt-0.5">
+                              {group}
+                            </span>
+                            <ul className="flex flex-col gap-1">
+                              {CONTENT_SECTIONS.filter((c) => c.group === group).map((c) => (
+                                <SidebarMenuSubItem key={c.key}>
+                                  <SidebarMenuSubButton
+                                    render={<Link href={`/admin/content/${c.key}`} />}
+                                    isActive={pathname === `/admin/content/${c.key}`}
+                                  >
+                                    <span>{c.title}</span>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </ul>
+                          </li>
+                        ))}
+                      </SidebarMenuSub>
+                    )}
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
 
         {crm.length > 0 && (
           <>
