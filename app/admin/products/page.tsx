@@ -1,30 +1,60 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
-import { formatCurrency } from "@/lib/utils/format"
-import { getStockLabel } from "@/lib/utils/format"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { ProductsTable } from "@/components/admin/products-table"
+import { parseFilters, type ProductRow } from "@/lib/admin/product-filters"
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const supabase = await createClient()
 
-  const { data: products } = await supabase
-    .from("products")
-    .select("*, category:categories(name), images:product_images(url, is_primary)")
-    .order("created_at", { ascending: false })
+  const [{ data: products }, { data: categories }, params] = await Promise.all([
+    supabase
+      .from("products")
+      .select(
+        "id, name, sku, category_id, base_price, sale_price, currency, stock_quantity, low_stock_threshold, is_active, is_featured, created_at, updated_at, category:categories(name), images:product_images(url, is_primary)",
+      )
+      .order("created_at", { ascending: false }),
+    supabase.from("categories").select("id, name").order("name"),
+    searchParams,
+  ])
+
+  // Only what the table needs goes to the browser.
+  const rows: ProductRow[] = (products ?? []).map((p) => {
+    const images = (p.images ?? []) as { url: string; is_primary: boolean }[]
+    const category = (Array.isArray(p.category) ? p.category[0] : p.category) as
+      | { name: string }
+      | null
+    const base = Number(p.base_price)
+    // Same rule as before: a sale price of 0 or empty means no sale.
+    const sale = p.sale_price ? Number(p.sale_price) : null
+    return {
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      categoryId: p.category_id,
+      categoryName: category?.name ?? null,
+      basePrice: base,
+      salePrice: sale,
+      price: sale ?? base,
+      currency: p.currency,
+      stock: p.stock_quantity,
+      lowStockThreshold: p.low_stock_threshold,
+      isActive: p.is_active,
+      isFeatured: p.is_featured,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
+      imageUrl: (images.find((i) => i.is_primary) ?? images[0])?.url ?? null,
+    }
+  })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
           <p className="text-sm text-muted-foreground">
@@ -37,110 +67,11 @@ export default async function AdminProductsPage() {
         </Button>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12" />
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products?.map((product) => {
-              const img =
-                product.images?.find((i: { is_primary: boolean }) => i.is_primary) ||
-                product.images?.[0]
-              const stock = getStockLabel(
-                product.stock_quantity,
-                product.low_stock_threshold,
-              )
-
-              return (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="w-10 h-10 bg-muted rounded overflow-hidden">
-                      {img ? (
-                        <img
-                          src={img.url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-amber-500/10 to-transparent" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/admin/products/${product.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {product.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {product.category?.name || "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {product.sku || "—"}
-                  </TableCell>
-                  <TableCell>
-                    {product.sale_price ? (
-                      <div>
-                        <span>{formatCurrency(product.sale_price, product.currency)}</span>
-                        <span className="text-muted-foreground line-through ml-1 text-xs">
-                          {formatCurrency(product.base_price, product.currency)}
-                        </span>
-                      </div>
-                    ) : (
-                      formatCurrency(product.base_price, product.currency)
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={`text-[0.6rem] ${
-                        stock.variant === "success"
-                          ? "bg-green-500/10 text-green-500"
-                          : stock.variant === "warning"
-                            ? "bg-yellow-500/10 text-yellow-500"
-                            : "bg-red-500/10 text-red-500"
-                      }`}
-                    >
-                      {product.stock_quantity} in stock
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={product.is_active ? "default" : "secondary"}
-                    >
-                      {product.is_active ? "Active" : "Draft"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-            {(!products || products.length === 0) && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">
-                    No products yet
-                  </p>
-                  <Button size="sm" render={<Link href="/admin/products/new" />}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add your first product
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <ProductsTable
+        rows={rows}
+        categories={(categories ?? []) as { id: string; name: string }[]}
+        initial={parseFilters(params)}
+      />
     </div>
   )
 }

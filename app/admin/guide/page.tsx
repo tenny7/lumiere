@@ -44,7 +44,7 @@ const SECTIONS: GuideTocSection[] = [
   { id: "payments", title: "Payments & verifying MoMo", keywords: "momo transfer verify cash on delivery cod ussd paid" },
   { id: "support", title: "Customer support chat", keywords: "messages chat block unblock typing online" },
   { id: "reviews", title: "Reviews", keywords: "approve hide delete moderation" },
-  { id: "products", title: "Products", keywords: "sku stock images price sale featured active delete" },
+  { id: "products", title: "Products", keywords: "sku stock images price sale featured active delete search filter sort" },
   { id: "categories", title: "Categories", keywords: "category image sort" },
   { id: "customers", title: "Customers", keywords: "users accounts roles online" },
   { id: "coupons", title: "Coupons", keywords: "discount code percentage fixed free shipping" },
@@ -456,6 +456,17 @@ export default function AdminGuidePage() {
             title="Products"
             summary="Adding, editing and stocking your catalog."
           >
+            <GuideH3>Find a product</GuideH3>
+            <Bullets
+              items={[
+                <>Search by name or SKU in the box above the list.</>,
+                <><strong>Sort</strong>: newest or oldest added, recently updated, name A–Z or Z–A, price, or stock. You can also click the <UI>Name</UI>, <UI>Price</UI>, <UI>Stock</UI> and <UI>Added</UI> column headings; click again to reverse.</>,
+                <><strong>Filter</strong> by category, status (Active, Draft, Featured), stock (in stock, low, out) and a price range. Price means what the customer pays, so the sale price when there is one.</>,
+                <>The filters stay in the page address, so going back to the list or sharing the link keeps them. <UI>Reset</UI> clears them.</>,
+                <>&ldquo;Recently updated&rdquo; includes stock changes from sales, not just your edits.</>,
+              ]}
+            />
+
             <GuideH3>Add a product</GuideH3>
             <Steps
               items={[
