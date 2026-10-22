@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { mergeGuestCart } from "@/lib/utils/cart"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
+import { GoogleSignInButton } from "@/components/storefront/google-sign-in-button"
 
 export function LoginForm() {
   const router = useRouter()
@@ -16,10 +17,13 @@ export function LoginForm() {
   const redirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const errorParam = searchParams.get("error")
   const [error, setError] = useState(
-    searchParams.get("error") === "link_invalid"
+    errorParam === "link_invalid"
       ? "That link is invalid or has expired. Please sign in or request a new one."
-      : "",
+      : errorParam === "google_failed"
+        ? "Google sign-in didn't finish. Please try again, or sign in with your email."
+        : "",
   )
   const [loading, setLoading] = useState(false)
 
@@ -166,10 +170,12 @@ export function LoginForm() {
         <span className="h-px flex-1 bg-[#242320]" />
       </div>
 
+      <GoogleSignInButton redirect={redirect} />
+
       <button
         type="button"
         onClick={openMagicLink}
-        className="w-full py-3 border border-[#242320] text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 transition-colors"
+        className="w-full mt-3 py-3 border border-[#242320] text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 transition-colors"
       >
         Email me a sign-in link
       </button>

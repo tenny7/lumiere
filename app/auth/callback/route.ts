@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-// Handles the link in confirmation / magic-link / password-recovery emails.
+// Handles the link in confirmation / magic-link / password-recovery emails,
+// and the return from Google sign-in.
 // Supabase (PKCE flow) sends the user back here with a `?code=` that must be
 // exchanged for a session cookie server-side. Without this route the links land
 // on a page that never signs the user in.
@@ -30,5 +31,7 @@ export async function GET(request: Request) {
   }
 
   // No code, or the exchange failed (expired / already used / wrong device).
-  return NextResponse.redirect(`${origin}/login?error=link_invalid`)
+  // Google sign-in also lands here, with ?error=, when the person cancels.
+  const reason = searchParams.get("via") === "google" ? "google_failed" : "link_invalid"
+  return NextResponse.redirect(`${origin}/login?error=${reason}`)
 }

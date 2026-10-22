@@ -801,7 +801,7 @@ export default function AdminGuidePage() {
                 ["Your newsletter", "All subscribers", "You click Send in Content → Newsletter."],
                 ["Message about your order", "Customer", "You reply in support chat."],
                 ["New support message", "All admins", "A customer sends a support message."],
-                ["Welcome to Ajabu Lighting", "New customer", "They sign up."],
+                ["Welcome to Ajabu Lighting", "New customer", "They sign up with email and password."],
                 ["New contact message", "Store inbox", "Someone uses the Contact page form."],
               ]}
             />
@@ -809,6 +809,11 @@ export default function AdminGuidePage() {
               Sign-up confirmations, sign-in links and password resets are sent
               by the login system (Supabase), using the email templates and
               sender set in your Supabase dashboard.
+            </p>
+            <p className="text-muted-foreground">
+              Customers can also sign in with Google from the login and sign-up
+              pages. Their first Google sign-in creates the account, named from
+              their Google profile. No welcome email is sent for these accounts.
             </p>
           </GuideSection>
 
