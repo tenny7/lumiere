@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
-import { renderWelcomeEmail } from "@/lib/emails/render"
+import { sendWelcomeEmail } from "@/lib/mail/welcome"
 import { z } from "zod"
 
 const schema = z.object({
@@ -32,21 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
-    try {
-      const html = renderWelcomeEmail({
-        customerName: name || profile.full_name || "there",
-        appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://ajabulighting.com",
-      })
-      await sendMail({
-        from: EMAIL_FROM,
-        replyTo: EMAIL_REPLY_TO,
-        to: email,
-        subject: "Welcome to Ajabu Lighting",
-        html,
-      })
-    } catch (emailError) {
-      console.error("Welcome email failed:", emailError)
-    }
+    await sendWelcomeEmail(email, name || profile.full_name || "there")
 
     return NextResponse.json({ success: true })
   } catch {

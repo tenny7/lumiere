@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { welcomeNewGoogleUser } from "@/lib/mail/welcome"
 
 // Handles the link in confirmation / magic-link / password-recovery emails,
 // and the return from Google sign-in.
@@ -17,8 +18,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // A new Google account gets the welcome email the signup form sends
+      // for email accounts. Sent after the redirect so sign-in isn't held up.
+      after(() => welcomeNewGoogleUser(data.user))
+
       // Behind Vercel's proxy the request origin is internal; prefer the
       // forwarded host so the redirect goes to the real public domain.
       const forwardedHost = request.headers.get("x-forwarded-host")
