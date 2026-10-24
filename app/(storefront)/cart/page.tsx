@@ -5,6 +5,7 @@ import { getStoreCurrency } from "@/lib/utils/settings"
 import { CartItems } from "@/components/storefront/cart-items"
 import { GuestCart } from "@/components/storefront/guest-cart"
 import { ShoppingBag } from "lucide-react"
+import type { ImageSource } from "@/lib/images/srcset"
 
 export default async function CartPage() {
   const supabase = await createClient()
@@ -24,7 +25,7 @@ export default async function CartPage() {
       sale_price: number | null
       currency: string
       stock_quantity: number
-      images: Array<{ url: string; is_primary: boolean }>
+      images: Array<ImageSource & { is_primary: boolean }>
     }
     variant: { id: string; name: string; price_adjustment: number } | null
   }> = []
@@ -33,7 +34,7 @@ export default async function CartPage() {
     const { data } = await supabase
       .from("cart_items")
       .select(
-        "id, quantity, product:products(id, name, slug, base_price, sale_price, currency, stock_quantity, images:product_images(url, is_primary)), variant:product_variants(id, name, price_adjustment)",
+        "id, quantity, product:products(id, name, slug, base_price, sale_price, currency, stock_quantity, images:product_images(url, is_primary, variants)), variant:product_variants(id, name, price_adjustment)",
       )
       .eq("profile_id", user.id)
 

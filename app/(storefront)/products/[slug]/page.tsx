@@ -7,6 +7,8 @@ import { getStoreCurrency } from "@/lib/utils/settings"
 import { Star, ChevronRight } from "lucide-react"
 import { ProductInteractions } from "@/components/storefront/product-interactions"
 import { ProductReviews } from "@/components/storefront/product-reviews"
+import { ProductImage } from "@/components/storefront/product-image"
+import { PRODUCT_IMAGE_COLUMNS, type ImageSource } from "@/lib/images/srcset"
 
 export default async function ProductPage({
   params,
@@ -68,7 +70,7 @@ export default async function ProductPage({
   // Related products
   const { data: related } = await supabase
     .from("products")
-    .select("id, name, slug, base_price, sale_price, currency, images:product_images(url, is_primary)")
+    .select(`id, name, slug, base_price, sale_price, currency, images:product_images(${PRODUCT_IMAGE_COLUMNS})`)
     .eq("is_active", true)
     .eq("category_id", product.category_id)
     .neq("id", product.id)
@@ -109,9 +111,11 @@ export default async function ProductPage({
           <div>
             <div className="aspect-square bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-3">
               {primaryImage ? (
-                <img
-                  src={primaryImage.url}
+                <ProductImage
+                  image={primaryImage}
                   alt={primaryImage.alt_text || product.name}
+                  sizes="(min-width: 1024px) 600px, 100vw"
+                  priority
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -125,14 +129,15 @@ export default async function ProductPage({
             </div>
             {product.images && product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
-                {product.images.slice(0, 4).map((img: { id: string; url: string; alt_text: string | null }) => (
+                {product.images.slice(0, 4).map((img: ImageSource & { id: string; alt_text: string | null }) => (
                   <div
                     key={img.id}
-                    className="aspect-square bg-[#1a1918] border border-white/[0.03] overflow-hidden"
+                    className="aspect-square bg-[#1a1918] border border-white/[0.03] relative overflow-hidden"
                   >
-                    <img
-                      src={img.url}
+                    <ProductImage
+                      image={img}
                       alt={img.alt_text || ""}
+                      sizes="(min-width: 1024px) 150px, 25vw"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -261,9 +266,10 @@ export default async function ProductPage({
                   >
                     <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-3">
                       {img ? (
-                        <img
-                          src={img.url}
+                        <ProductImage
+                          image={img}
                           alt={item.name}
+                          sizes="(min-width: 1024px) 300px, 50vw"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (

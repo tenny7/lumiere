@@ -5,6 +5,8 @@ import { formatCurrency } from "@/lib/utils/format"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { ArrowLeft, ArrowRight, Heart } from "lucide-react"
 import { WishlistActions } from "./wishlist-actions"
+import { ProductImage } from "@/components/storefront/product-image"
+import { PRODUCT_IMAGE_COLUMNS } from "@/lib/images/srcset"
 
 export default async function WishlistPage() {
   const supabase = await createClient()
@@ -21,7 +23,7 @@ export default async function WishlistPage() {
 
   const { data: wishlistItems } = await supabase
     .from("wishlists")
-    .select("id, product_id, product:products(id, name, slug, base_price, sale_price, currency, images:product_images(url, alt_text, is_primary))")
+    .select(`id, product_id, product:products(id, name, slug, base_price, sale_price, currency, images:product_images(${PRODUCT_IMAGE_COLUMNS}))`)
     .eq("profile_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -59,9 +61,10 @@ export default async function WishlistPage() {
                   <Link href={`/products/${product.slug}`}>
                     <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-3">
                       {primaryImage ? (
-                        <img
-                          src={primaryImage.url}
+                        <ProductImage
+                          image={primaryImage}
                           alt={primaryImage.alt_text || product.name}
+                          sizes="(min-width: 1024px) 300px, 50vw"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (

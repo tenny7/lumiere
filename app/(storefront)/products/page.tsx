@@ -4,6 +4,8 @@ import { formatCurrency } from "@/lib/utils/format"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { ProductCardActions } from "@/components/storefront/product-card-actions"
 import { ShopTip } from "@/components/storefront/shop-tip"
+import { ProductImage } from "@/components/storefront/product-image"
+import { PRODUCT_IMAGE_COLUMNS } from "@/lib/images/srcset"
 import { ArrowRight } from "lucide-react"
 
 export default async function ProductsPage({
@@ -18,7 +20,7 @@ export default async function ProductsPage({
   // Build query
   let query = supabase
     .from("products")
-    .select("*, category:categories(name, slug), images:product_images(url, alt_text, is_primary)", { count: "exact" })
+    .select(`*, category:categories(name, slug), images:product_images(${PRODUCT_IMAGE_COLUMNS})`, { count: "exact" })
     .eq("is_active", true)
 
   if (params.category) {
@@ -182,7 +184,7 @@ export default async function ProductsPage({
             {products && products.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                  {products.map((product) => {
+                  {products.map((product, i) => {
                     const primaryImage = product.images?.find(
                       (img: { is_primary: boolean }) => img.is_primary,
                     ) || product.images?.[0]
@@ -199,9 +201,12 @@ export default async function ProductsPage({
                         >
                         <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-3">
                           {primaryImage ? (
-                            <img
-                              src={primaryImage.url}
+                            <ProductImage
+                              image={primaryImage}
                               alt={primaryImage.alt_text || product.name}
+                              sizes="(min-width: 1024px) 300px, 50vw"
+                              // The first row is on screen straight away.
+                              priority={i < 2}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
                           ) : (

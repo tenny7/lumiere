@@ -1,3 +1,5 @@
+import type { ImageVariant } from "@/lib/images/variants"
+
 export type UserRole = "customer" | "sales_agent" | "inventory_manager" | "admin" | "super_admin"
 export type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded"
 export type PaymentProvider = "momo_mtn" | "momo_vodafone" | "momo_airteltigo" | "manual"
@@ -83,6 +85,12 @@ export interface ProductImage {
   alt_text: string | null
   sort_order: number
   is_primary: boolean
+  // Filled by the upload route (lib/images/variants.ts); null for photos
+  // that have no WebP copies.
+  width: number | null
+  height: number | null
+  blur_data_url: string | null
+  variants: ImageVariant[] | null
 }
 
 export interface ProductVariant {

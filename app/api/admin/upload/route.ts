@@ -2,16 +2,20 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { can } from "@/lib/permissions"
+import { CACHE_SECONDS, toWebp } from "@/lib/images/variants"
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
 const ALLOWED_FOLDERS = ["categories", "misc"]
+// Widest a category tile is shown, on a sharp phone screen.
+const MAX_WIDTH = 1200
 
 /**
  * Generic admin image upload. Stores a file in the public `product-images`
  * bucket under a folder prefix and returns its public URL. Unlike
  * /api/admin/images/upload, it does NOT touch product_images — the caller saves
- * the returned URL wherever it needs (e.g. categories.image_url).
+ * the returned URL wherever it needs (e.g. categories.image_url). Photos are
+ * stored as a WebP no wider than MAX_WIDTH; GIFs stay as they are.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -54,13 +58,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const ext = file.name.split(".").pop() || "jpg"
+    let ext = file.name.split(".").pop() || "jpg"
+    let contentType = file.type
+    let buffer: Buffer = Buffer.from(await file.arrayBuffer())
+    if (file.type !== "image/gif") {
+      try {
+        buffer = await toWebp(buffer, MAX_WIDTH)
+        ext = "webp"
+        contentType = "image/webp"
+      } catch (convertError) {
+        // Store the original instead: it still works, just bigger.
+        console.error("Image convert error:", convertError)
+      }
+    }
     const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-    const buffer = Buffer.from(await file.arrayBuffer())
 
     const { error: uploadError } = await adminDb.storage
       .from("product-images")
-      .upload(fileName, buffer, { contentType: file.type, upsert: false })
+      .upload(fileName, buffer, {
+        contentType,
+        cacheControl: CACHE_SECONDS,
+        upsert: false,
+      })
     if (uploadError) {
       console.error("Storage upload error:", uploadError)
       return NextResponse.json({ error: "Failed to upload image" }, { status: 500 })

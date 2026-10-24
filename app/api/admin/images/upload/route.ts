@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { can } from "@/lib/permissions"
+import {
+  BUCKET,
+  CACHE_SECONDS,
+  optimizeImage,
+  type OptimizedImage,
+} from "@/lib/images/variants"
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -89,15 +95,17 @@ export async function POST(request: NextRequest) {
 
     // Build a unique file path
     const ext = file.name.split(".").pop() || "jpg"
-    const fileName = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const basePath = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const fileName = `${basePath}.${ext}`
 
     // Upload to Supabase Storage
     const buffer = Buffer.from(await file.arrayBuffer())
 
     const { error: uploadError } = await adminDb.storage
-      .from("product-images")
+      .from(BUCKET)
       .upload(fileName, buffer, {
         contentType: file.type,
+        cacheControl: CACHE_SECONDS,
         upsert: false,
       })
 
@@ -112,7 +120,19 @@ export async function POST(request: NextRequest) {
     // Get the public URL
     const {
       data: { publicUrl },
-    } = adminDb.storage.from("product-images").getPublicUrl(fileName)
+    } = adminDb.storage.from(BUCKET).getPublicUrl(fileName)
+
+    // Smaller WebP copies for the storefront. GIFs stay as they are so an
+    // animation keeps playing. If this fails the photo still saves, and the
+    // storefront shows the original.
+    let optimized: OptimizedImage | null = null
+    if (file.type !== "image/gif") {
+      try {
+        optimized = await optimizeImage(adminDb, basePath, buffer)
+      } catch (optimizeError) {
+        console.error("Image optimize error:", optimizeError)
+      }
+    }
 
     // Determine sort order (append after existing images)
     const { count } = await adminDb
@@ -130,14 +150,21 @@ export async function POST(request: NextRequest) {
         url: publicUrl,
         alt_text: altText,
         sort_order: sortOrder,
+        width: optimized?.width ?? null,
+        height: optimized?.height ?? null,
+        blur_data_url: optimized?.blurDataUrl ?? null,
+        variants: optimized?.variants ?? null,
       })
       .select()
       .single()
 
     if (insertError) {
       console.error("DB insert error:", insertError)
-      // Attempt to clean up the uploaded file
-      await adminDb.storage.from("product-images").remove([fileName])
+      // Attempt to clean up the uploaded files
+      const copies = (optimized?.variants ?? []).map(
+        (v) => `${basePath}-${v.width}.webp`,
+      )
+      await adminDb.storage.from(BUCKET).remove([fileName, ...copies])
       return NextResponse.json(
         { error: "Failed to save image record" },
         { status: 500 },

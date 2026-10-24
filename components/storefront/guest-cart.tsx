@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { formatCurrency } from "@/lib/utils/format"
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
+import { sizedSrc, type ImageSource } from "@/lib/images/srcset"
 
 const CART_KEY = "lumiere_cart"
 
@@ -59,7 +60,7 @@ export function GuestCart({ currency = "RWF" }: { currency?: string }) {
       supabase
         .from("products")
         .select(
-          "id, name, slug, base_price, sale_price, stock_quantity, images:product_images(url, is_primary)",
+          "id, name, slug, base_price, sale_price, stock_quantity, images:product_images(url, is_primary, variants)",
         )
         .in("id", productIds),
       variantIds.length
@@ -79,7 +80,7 @@ export function GuestCart({ currency = "RWF" }: { currency?: string }) {
       const variant = entry.variantId
         ? variants.find((v) => v.id === entry.variantId)
         : undefined
-      const img =
+      const img: ImageSource | undefined =
         product.images?.find((i: { is_primary: boolean }) => i.is_primary) ||
         product.images?.[0]
       display.push({
@@ -93,7 +94,7 @@ export function GuestCart({ currency = "RWF" }: { currency?: string }) {
           (product.sale_price || product.base_price) +
           (variant?.price_adjustment || 0),
         stock: variant?.stock_quantity ?? product.stock_quantity,
-        image: img?.url ?? null,
+        image: img ? sizedSrc(img, 200) : null,
         variantName: variant?.name,
       })
     }
@@ -173,6 +174,8 @@ export function GuestCart({ currency = "RWF" }: { currency?: string }) {
                 <img
                   src={item.image}
                   alt={item.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               ) : (

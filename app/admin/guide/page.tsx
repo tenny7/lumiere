@@ -481,7 +481,7 @@ export default function AdminGuidePage() {
                 <>Pick a <strong>Category</strong>. The <strong>SKU</strong> fills itself in (e.g. LUM-CHAN-001), or click <UI>Generate</UI>.</>,
                 <>Set <strong>Stock Quantity</strong> and tick <UI>Active</UI> to show it on the site, and <UI>Featured</UI> to put it on the homepage.</>,
                 <>Click <UI>Create Product</UI>.</>,
-                <><strong>Then add photos:</strong> open the product again from the list and use <UI>Upload Image</UI> (JPG, PNG, WEBP or GIF, up to 5 MB).</>,
+                <><strong>Then add photos:</strong> open the product again from the list and use <UI>Upload Image</UI> (JPG, PNG, WEBP or GIF, up to 5 MB). Upload the best quality you have: the site makes small, fast copies for shoppers automatically and keeps your original.</>,
               ]}
             />
             <InfoTable

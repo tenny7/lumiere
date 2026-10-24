@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { can } from "@/lib/permissions"
+import { BUCKET, storagePath, type ImageVariant } from "@/lib/images/variants"
 
 export async function DELETE(
   request: NextRequest,
@@ -35,7 +36,7 @@ export async function DELETE(
     // Get the image record
     const { data: image, error: fetchError } = await adminDb
       .from("product_images")
-      .select("id, url, product_id")
+      .select("id, url, product_id, variants")
       .eq("id", id)
       .single()
 
@@ -46,17 +47,15 @@ export async function DELETE(
       )
     }
 
-    // Extract the storage path from the public URL
-    // Public URLs have the pattern: .../storage/v1/object/public/product-images/<path>
-    const bucketPrefix = "/storage/v1/object/public/product-images/"
-    const urlIndex = image.url.indexOf(bucketPrefix)
-    if (urlIndex !== -1) {
-      const storagePath = decodeURIComponent(
-        image.url.slice(urlIndex + bucketPrefix.length),
-      )
+    // The original and its WebP copies, from their public URLs.
+    const variants = (image.variants ?? []) as ImageVariant[]
+    const paths = [image.url, ...variants.map((v) => v.url)]
+      .map(storagePath)
+      .filter((p): p is string => p !== null)
+    if (paths.length > 0) {
       const { error: removeError } = await adminDb.storage
-        .from("product-images")
-        .remove([storagePath])
+        .from(BUCKET)
+        .remove(paths)
 
       if (removeError) {
         console.error("Storage remove error:", removeError)

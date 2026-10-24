@@ -4,6 +4,7 @@ import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProductsTable } from "@/components/admin/products-table"
 import { parseFilters, type ProductRow } from "@/lib/admin/product-filters"
+import { sizedSrc, type ImageSource } from "@/lib/images/srcset"
 
 export default async function AdminProductsPage({
   searchParams,
@@ -16,7 +17,7 @@ export default async function AdminProductsPage({
     supabase
       .from("products")
       .select(
-        "id, name, sku, category_id, base_price, sale_price, currency, stock_quantity, low_stock_threshold, is_active, is_featured, created_at, updated_at, category:categories(name), images:product_images(url, is_primary)",
+        "id, name, sku, category_id, base_price, sale_price, currency, stock_quantity, low_stock_threshold, is_active, is_featured, created_at, updated_at, category:categories(name), images:product_images(url, is_primary, variants)",
       )
       .order("created_at", { ascending: false }),
     supabase.from("categories").select("id, name").order("name"),
@@ -25,7 +26,8 @@ export default async function AdminProductsPage({
 
   // Only what the table needs goes to the browser.
   const rows: ProductRow[] = (products ?? []).map((p) => {
-    const images = (p.images ?? []) as { url: string; is_primary: boolean }[]
+    const images = (p.images ?? []) as (ImageSource & { is_primary: boolean })[]
+    const mainImage = images.find((i) => i.is_primary) ?? images[0]
     const category = (Array.isArray(p.category) ? p.category[0] : p.category) as
       | { name: string }
       | null
@@ -48,7 +50,7 @@ export default async function AdminProductsPage({
       isFeatured: p.is_featured,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
-      imageUrl: (images.find((i) => i.is_primary) ?? images[0])?.url ?? null,
+      imageUrl: mainImage ? sizedSrc(mainImage, 96) : null,
     }
   })
 

@@ -7,6 +7,8 @@ import { CONTENT_ICONS } from "@/lib/content/icons"
 import { createClient } from "@/lib/supabase/server"
 import { getStoreCurrency } from "@/lib/utils/settings"
 import { formatCurrency } from "@/lib/utils/format"
+import { ProductImage } from "@/components/storefront/product-image"
+import { PRODUCT_IMAGE_COLUMNS, type ImageSource } from "@/lib/images/srcset"
 
 // Fallback gradient accents for category cards that don't have a photo yet
 // (cycled by index so the grid stays visually varied).
@@ -41,7 +43,7 @@ type FeaturedProduct = {
   base_price: number
   sale_price: number | null
   category: { name: string } | null
-  images: Array<{ url: string; is_primary: boolean }>
+  images: Array<ImageSource & { is_primary: boolean }>
 }
 
 export default async function HomePage() {
@@ -64,7 +66,7 @@ export default async function HomePage() {
   let { data: featuredProducts } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, sale_price, category:categories(name), images:product_images(url, is_primary)",
+      `id, name, slug, base_price, sale_price, category:categories(name), images:product_images(${PRODUCT_IMAGE_COLUMNS})`,
     )
     .eq("is_active", true)
     .eq("is_featured", true)
@@ -74,7 +76,7 @@ export default async function HomePage() {
     const { data } = await supabase
       .from("products")
       .select(
-        "id, name, slug, base_price, sale_price, category:categories(name), images:product_images(url, is_primary)",
+        `id, name, slug, base_price, sale_price, category:categories(name), images:product_images(${PRODUCT_IMAGE_COLUMNS})`,
       )
       .eq("is_active", true)
       .order("created_at", { ascending: false })
@@ -210,6 +212,8 @@ export default async function HomePage() {
                 <img
                   src={cat.image_url}
                   alt={cat.name}
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                 />
               ) : (
@@ -274,10 +278,10 @@ export default async function HomePage() {
                 <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-4">
                   <div className="absolute inset-0 bg-gradient-radial from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
                   {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={img.url}
+                    <ProductImage
+                      image={img}
                       alt={product.name}
+                      sizes="(min-width: 1024px) 300px, 50vw"
                       className="w-full h-full object-cover"
                     />
                   ) : (

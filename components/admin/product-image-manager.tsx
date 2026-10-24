@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Upload, Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { ProductImage } from "@/lib/types"
+import { sizedSrc } from "@/lib/images/srcset"
+
+function formatBytes(bytes: number) {
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`
+}
 
 export function ProductImageManager({ productId }: { productId: string }) {
   const [images, setImages] = useState<ProductImage[]>([])
@@ -49,7 +56,15 @@ export function ProductImageManager({ productId }: { productId: string }) {
       if (!res.ok) {
         toast.error(data.error || "Upload failed")
       } else {
-        toast.success("Image uploaded")
+        // The mid-size copy: what most phones get for a product card.
+        const variants = (data as ProductImage).variants ?? []
+        const shown =
+          variants.find((v) => v.width >= 960) ?? variants[variants.length - 1]
+        toast.success(
+          shown
+            ? `Image uploaded. Shoppers download ${formatBytes(shown.bytes)} instead of ${formatBytes(file.size)}.`
+            : "Image uploaded",
+        )
         await refresh()
       }
     } catch {
@@ -94,7 +109,7 @@ export function ProductImageManager({ productId }: { productId: string }) {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={img.url}
+                  src={sizedSrc(img, 300)}
                   alt={img.alt_text || ""}
                   className="w-full h-full object-cover"
                 />

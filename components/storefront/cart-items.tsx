@@ -6,6 +6,7 @@ import { notifyCartUpdated } from "@/hooks/use-cart-count"
 import { formatCurrency } from "@/lib/utils/format"
 import { Minus, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { sizedSrc, type ImageSource } from "@/lib/images/srcset"
 
 interface CartItemData {
   id: string
@@ -18,7 +19,7 @@ interface CartItemData {
     sale_price: number | null
     currency: string
     stock_quantity: number
-    images: Array<{ url: string; is_primary: boolean }>
+    images: Array<ImageSource & { is_primary: boolean }>
   }
   variant: { id: string; name: string; price_adjustment: number } | null
 }
@@ -70,8 +71,10 @@ export function CartItems({
             <div className="w-20 h-24 bg-[#1a1918] border border-white/[0.03] flex-shrink-0 overflow-hidden">
               {primaryImage ? (
                 <img
-                  src={primaryImage.url}
+                  src={sizedSrc(primaryImage, 200)}
                   alt={item.product.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               ) : (
