@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { evaluateCoupon, type CouponRow } from "@/lib/utils/coupon"
+import {
+  ALREADY_USED,
+  COUPON_COLUMNS,
+  evaluateCoupon,
+  hasRedeemedCoupon,
+  type CouponRow,
+} from "@/lib/utils/coupon"
 import { z } from "zod"
 
 const schema = z.object({
@@ -20,15 +26,24 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const { data: coupon } = await supabase
       .from("coupons")
-      .select(
-        "id, type, value, min_order_amount, max_uses, uses_count, starts_at, expires_at, is_active",
-      )
+      .select(COUPON_COLUMNS)
       .eq("code", code.trim().toUpperCase())
       .maybeSingle()
 
     const result = evaluateCoupon(coupon as CouponRow | null, subtotal)
     if (result.error) {
       return NextResponse.json({ valid: false, error: result.error })
+    }
+
+    // Automatic coupons are once per customer, typed in or not.
+    const row = coupon as CouponRow
+    if (row.auto_apply) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user && (await hasRedeemedCoupon(supabase, row.id, user.id))) {
+        return NextResponse.json({ valid: false, error: ALREADY_USED })
+      }
     }
 
     return NextResponse.json({

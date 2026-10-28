@@ -555,6 +555,7 @@ export default function AdminGuidePage() {
                 <><strong>Min Order</strong> (optional): the items total needed before discount.</>,
                 <><strong>Max Uses</strong>: leave empty for unlimited.</>,
                 <>One coupon per order. A use is counted when the order is actually placed (or paid), so abandoned checkouts don&apos;t use it up.</>,
+                <><UI>Apply automatically at checkout</UI>: signed-in customers get the coupon without typing the code, once each, so a Max Uses of 100 means the first 100 customers. The dates and Min Order still apply. If several qualify, the customer gets the biggest discount, and they can remove it or use another code instead. The list shows these coupons as <strong>Auto</strong>.</>,
               ]}
             />
             <Callout tone="warning" title="Expiry date tip">

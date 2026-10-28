@@ -1,5 +1,13 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
+
+// Columns evaluateCoupon and the once-per-customer rule need.
+export const COUPON_COLUMNS =
+  "id, code, type, value, min_order_amount, max_uses, uses_count, starts_at, expires_at, is_active, auto_apply"
+
 export interface CouponRow {
   id: string
+  code: string
+  auto_apply: boolean
   type: "percentage" | "fixed_amount" | "free_shipping"
   value: number
   min_order_amount: number | null
@@ -50,3 +58,24 @@ export function evaluateCoupon(
   // free_shipping
   return { discount: 0, freeShipping: true }
 }
+
+/**
+ * Whether this customer has already used the coupon on an order that was
+ * placed or paid. Automatic coupons are one per customer, so "Max Uses 100"
+ * means the first 100 customers.
+ */
+export async function hasRedeemedCoupon(
+  db: SupabaseClient,
+  couponId: string,
+  customerId: string,
+): Promise<boolean> {
+  const { count } = await db
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_id", customerId)
+    .eq("coupon_id", couponId)
+    .eq("coupon_redeemed", true)
+  return (count ?? 0) > 0
+}
+
+export const ALREADY_USED = "You've already used this offer"

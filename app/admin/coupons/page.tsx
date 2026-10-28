@@ -82,6 +82,11 @@ export default async function AdminCouponsPage() {
                   <Badge variant={coupon.is_active ? "default" : "secondary"}>
                     {coupon.is_active ? "Active" : "Inactive"}
                   </Badge>
+                  {coupon.auto_apply && (
+                    <Badge variant="outline" className="ml-1.5">
+                      Auto
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Button

@@ -163,6 +163,8 @@ export interface Coupon {
   starts_at: string | null
   expires_at: string | null
   is_active: boolean
+  /** Checkout applies it without the code, once per customer (00025). */
+  auto_apply: boolean
 }
 
 export interface Review {

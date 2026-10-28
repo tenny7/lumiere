@@ -41,6 +41,7 @@ export function CouponForm({ coupon }: { coupon?: Coupon }) {
   const [startsAt, setStartsAt] = useState(toDateInput(coupon?.starts_at))
   const [expiresAt, setExpiresAt] = useState(toDateInput(coupon?.expires_at))
   const [isActive, setIsActive] = useState(coupon?.is_active ?? true)
+  const [autoApply, setAutoApply] = useState(coupon?.auto_apply ?? false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -56,6 +57,7 @@ export function CouponForm({ coupon }: { coupon?: Coupon }) {
       starts_at: startsAt ? new Date(startsAt).toISOString() : null,
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       is_active: isActive,
+      auto_apply: autoApply,
     }
 
     if (coupon) {
@@ -212,6 +214,18 @@ export function CouponForm({ coupon }: { coupon?: Coupon }) {
           <div className="flex items-center justify-between">
             <Label htmlFor="active">Active</Label>
             <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
+          </div>
+
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <Label htmlFor="autoApply">Apply automatically at checkout</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Signed-in customers get it without typing the code, once each.
+                With Max Uses set to 100, the first 100 customers get it. The
+                dates and minimum order still apply.
+              </p>
+            </div>
+            <Switch id="autoApply" checked={autoApply} onCheckedChange={setAutoApply} />
           </div>
         </CardContent>
       </Card>

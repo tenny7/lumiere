@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { evaluateCoupon, type CouponRow } from "@/lib/utils/coupon"
+import {
+  ALREADY_USED,
+  COUPON_COLUMNS,
+  evaluateCoupon,
+  hasRedeemedCoupon,
+  type CouponRow,
+} from "@/lib/utils/coupon"
 import { getStoreCurrency, getPricingSettings } from "@/lib/utils/settings"
 import { computeOrderTotals } from "@/lib/utils/pricing"
 import { normalizeInternationalPhone } from "@/lib/utils/phone"
@@ -112,15 +118,20 @@ export async function POST(request: NextRequest) {
     if (couponCode) {
       const { data: coupon } = await adminDb
         .from("coupons")
-        .select(
-          "id, type, value, min_order_amount, max_uses, uses_count, starts_at, expires_at, is_active",
-        )
+        .select(COUPON_COLUMNS)
         .eq("code", couponCode.trim().toUpperCase())
         .maybeSingle()
 
       const result = evaluateCoupon(coupon as CouponRow | null, subtotal)
       if (result.error) {
         return NextResponse.json({ error: result.error }, { status: 400 })
+      }
+      // Automatic coupons are once per customer.
+      if (
+        (coupon as CouponRow).auto_apply &&
+        (await hasRedeemedCoupon(adminDb, coupon!.id, user.id))
+      ) {
+        return NextResponse.json({ error: ALREADY_USED }, { status: 400 })
       }
       discountAmount = result.discount
       freeShipping = result.freeShipping

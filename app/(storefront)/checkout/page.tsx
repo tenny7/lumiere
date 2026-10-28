@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -83,7 +83,11 @@ export default function CheckoutPage() {
     code: string
     discount: number
     freeShipping: boolean
+    /** Applied by the store (Admin → Coupons, "Apply automatically"). */
+    auto?: boolean
   } | null>(null)
+  // Ask for an automatic coupon once, so one the customer removes stays off.
+  const autoCouponChecked = useRef(false)
 
   // Payment
   const [availableProviders, setAvailableProviders] = useState<
@@ -241,6 +245,24 @@ export default function CheckoutPage() {
     const price = (item.product.sale_price || item.product.base_price) + (item.variant?.price_adjustment || 0)
     return sum + price * item.quantity
   }, 0)
+
+  // Once the cart is in, apply the store's best automatic coupon, if any.
+  useEffect(() => {
+    if (subtotal <= 0 || autoCouponChecked.current) return
+    autoCouponChecked.current = true
+    fetch("/api/coupons/auto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subtotal }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.coupon) return
+        // A code the customer applied meanwhile wins.
+        setAppliedCoupon((current) => current ?? { ...data.coupon, auto: true })
+      })
+      .catch(() => {})
+  }, [subtotal])
 
   // Same calculation the server uses: delivery fee + free-delivery threshold +
   // VAT from Admin → Settings, each added once.
@@ -666,7 +688,8 @@ export default function CheckoutPage() {
                   {appliedCoupon ? (
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-green-400">
-                        Coupon {appliedCoupon.code} applied
+                        Coupon {appliedCoupon.code}{" "}
+                        {appliedCoupon.auto ? "applied automatically" : "applied"}
                       </span>
                       <button
                         type="button"
