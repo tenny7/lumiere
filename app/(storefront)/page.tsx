@@ -119,11 +119,11 @@ export default async function HomePage() {
   const shopCategories = categoriesWithProducts.slice(0, 6)
 
   return (
-    // Phones: hero, then products, then the rest (order-*). Computers keep
-    // the order below (lg:order-none).
+    // Products come right after the hero (order-*): on phones before the
+    // marquee, on computers just after it. Category tiles and the rest follow.
     <div className="flex flex-col">
       {/* ═══ HERO ═══ */}
-      <section className="order-1 lg:order-none pt-24 pb-8 lg:pt-0 lg:pb-0 lg:min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-4">
+      <section className="order-1 pt-24 pb-8 lg:pt-28 lg:pb-16 lg:min-h-[55vh] flex flex-col justify-center items-center relative overflow-hidden px-4">
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[15%] left-[20%] w-[300px] h-[300px] bg-amber-500/[0.07] rounded-full blur-[80px] animate-pulse" />
@@ -133,11 +133,11 @@ export default async function HomePage() {
 
         <div className="text-center relative z-10">
           {home.eyebrow && (
-            <p className="text-[0.6rem] lg:text-[0.7rem] font-medium tracking-[0.4em] uppercase text-amber-400 mb-4 lg:mb-8 animate-fade-in">
+            <p className="text-[0.6rem] lg:text-[0.7rem] font-medium tracking-[0.4em] uppercase text-amber-400 mb-4 lg:mb-6 animate-fade-in">
               {home.eyebrow}
             </p>
           )}
-          <h1 className="font-serif text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-light leading-[0.95] tracking-tight mb-4 lg:mb-8">
+          <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-light leading-[0.95] tracking-tight mb-4 lg:mb-6">
             {home.titleLine1}
             {home.titleLine1 && home.titleHighlight && <br />}
             {home.titleHighlight && (
@@ -145,7 +145,7 @@ export default async function HomePage() {
             )}
           </h1>
           {home.subtitle && (
-            <p className="hidden sm:block text-base font-extralight text-[#8a8478] max-w-md mx-auto mb-10 leading-relaxed">
+            <p className="hidden sm:block text-base font-extralight text-[#8a8478] max-w-md mx-auto mb-8 leading-relaxed">
               {home.subtitle}
             </p>
           )}
@@ -168,7 +168,7 @@ export default async function HomePage() {
 
       {/* ═══ MARQUEE ═══ */}
       {home.marquee.length > 0 && (
-      <div className="order-3 lg:order-none py-3.5 border-y border-white/5 overflow-hidden">
+      <div className="order-3 lg:order-2 py-3.5 border-y border-white/5 overflow-hidden">
         <div className="flex gap-12 animate-marquee whitespace-nowrap">
           {/* Listed twice so the scroll loops seamlessly. */}
           {[...home.marquee, ...home.marquee].map((text, i) => (
@@ -185,7 +185,7 @@ export default async function HomePage() {
       )}
 
       {/* ═══ CATEGORIES ═══ */}
-      <section className="order-4 lg:order-none w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+      <section className="order-4 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
         <div className="flex justify-between items-end mb-12">
           <div>
             {home.categoriesEyebrow && (
@@ -250,7 +250,7 @@ export default async function HomePage() {
       </section>
 
       {/* ═══ FEATURED PRODUCTS ═══ */}
-      <section className="order-2 lg:order-none w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 lg:pb-28">
+      <section className="order-2 lg:order-3 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 lg:pt-16 lg:pb-8">
         <div className="flex justify-between items-end mb-5 lg:mb-12">
           <div>
             {home.featuredEyebrow && (
@@ -358,7 +358,7 @@ export default async function HomePage() {
 
       {/* ═══ TESTIMONIALS (approved reviews) ═══ */}
       {testimonials.length > 0 && (
-        <section className="order-5 lg:order-none py-16 lg:py-24 border-y border-white/5 px-4">
+        <section className="order-5 py-16 lg:py-24 border-y border-white/5 px-4">
           {testimonialSettings.heading && (
             <p className="text-center text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-10">
               {testimonialSettings.heading}
@@ -381,7 +381,7 @@ export default async function HomePage() {
       {/* ═══ STORE PROMISES ═══ */}
       {promises.items.length > 0 && (
         <section
-          className={`order-5 lg:order-none grid grid-cols-2 ${PROMISE_COLS[promises.items.length] ?? "lg:grid-cols-4"} border-b border-white/5`}
+          className={`order-5 grid grid-cols-2 ${PROMISE_COLS[promises.items.length] ?? "lg:grid-cols-4"} border-b border-white/5`}
         >
           {promises.items.map((item, i) => {
             const Icon = CONTENT_ICONS[item.icon as keyof typeof CONTENT_ICONS]?.Icon ?? Lightbulb
@@ -400,7 +400,7 @@ export default async function HomePage() {
       )}
 
       {/* ═══ NEWSLETTER ═══ */}
-      <section className="order-5 lg:order-none py-16 lg:py-24 text-center px-4 relative">
+      <section className="order-5 py-16 lg:py-24 text-center px-4 relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[250px] bg-gradient-radial from-amber-500/[0.04] to-transparent pointer-events-none" />
         {newsletter.title && (
           <h2 className="font-serif text-2xl sm:text-3xl font-light mb-3 relative">
