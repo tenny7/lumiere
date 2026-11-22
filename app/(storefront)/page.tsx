@@ -36,6 +36,10 @@ const PROMISE_COLS: Record<number, string> = {
   3: "lg:grid-cols-3",
 }
 
+// Products on the home page: all on phones, the first four on computers.
+const HOME_PRODUCTS = 8
+const DESKTOP_PRODUCTS = 4
+
 type FeaturedProduct = {
   id: string
   name: string
@@ -62,29 +66,29 @@ export default async function HomePage() {
     ? await getTestimonials(testimonialSettings)
     : []
 
-  // Real featured products (fall back to newest active products)
-  let { data: featuredProducts } = await supabase
+  // Featured products first, topped up with the newest active ones. Phones show
+  // all of them near the top of the page; computers show the first four.
+  const productColumns = `id, name, slug, base_price, sale_price, category:categories(name), images:product_images(${PRODUCT_IMAGE_COLUMNS})`
+  const { data: featuredProducts } = await supabase
     .from("products")
-    .select(
-      `id, name, slug, base_price, sale_price, category:categories(name), images:product_images(${PRODUCT_IMAGE_COLUMNS})`,
-    )
+    .select(productColumns)
     .eq("is_active", true)
     .eq("is_featured", true)
-    .limit(4)
-
-  if (!featuredProducts || featuredProducts.length === 0) {
-    const { data } = await supabase
+    .limit(HOME_PRODUCTS)
+  let homeProducts = featuredProducts ?? []
+  if (homeProducts.length < HOME_PRODUCTS) {
+    const { data: newest } = await supabase
       .from("products")
-      .select(
-        `id, name, slug, base_price, sale_price, category:categories(name), images:product_images(${PRODUCT_IMAGE_COLUMNS})`,
-      )
+      .select(productColumns)
       .eq("is_active", true)
       .order("created_at", { ascending: false })
-      .limit(4)
-    featuredProducts = data
+      .limit(HOME_PRODUCTS * 2)
+    const shown = new Set(homeProducts.map((p) => p.id))
+    homeProducts = [...homeProducts, ...(newest ?? []).filter((p) => !shown.has(p.id))]
+      .slice(0, HOME_PRODUCTS)
   }
 
-  const featured = (featuredProducts || []) as unknown as FeaturedProduct[]
+  const featured = homeProducts as unknown as FeaturedProduct[]
 
   // "Shop by Category" — real categories from the DB (with their image_url),
   // showing only those that have active products, top 6 by sort order.
@@ -103,7 +107,7 @@ export default async function HomePage() {
       categoryCounts.set(p.category_id, (categoryCounts.get(p.category_id) || 0) + 1)
     }
   }
-  const shopCategories: ShopCategory[] = (dbCategories || [])
+  const categoriesWithProducts: ShopCategory[] = (dbCategories || [])
     .map((c) => ({
       id: c.id,
       name: c.name,
@@ -112,12 +116,14 @@ export default async function HomePage() {
       count: categoryCounts.get(c.id) || 0,
     }))
     .filter((c) => c.count > 0)
-    .slice(0, 6)
+  const shopCategories = categoriesWithProducts.slice(0, 6)
 
   return (
-    <>
+    // Phones: hero, then products, then the rest (order-*). Computers keep
+    // the order below (lg:order-none).
+    <div className="flex flex-col">
       {/* ═══ HERO ═══ */}
-      <section className="min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-4">
+      <section className="order-1 lg:order-none pt-24 pb-8 lg:pt-0 lg:pb-0 lg:min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-4">
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[15%] left-[20%] w-[300px] h-[300px] bg-amber-500/[0.07] rounded-full blur-[80px] animate-pulse" />
@@ -127,11 +133,11 @@ export default async function HomePage() {
 
         <div className="text-center relative z-10">
           {home.eyebrow && (
-            <p className="text-[0.7rem] font-medium tracking-[0.4em] uppercase text-amber-400 mb-8 animate-fade-in">
+            <p className="text-[0.6rem] lg:text-[0.7rem] font-medium tracking-[0.4em] uppercase text-amber-400 mb-4 lg:mb-8 animate-fade-in">
               {home.eyebrow}
             </p>
           )}
-          <h1 className="font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-light leading-[0.95] tracking-tight mb-8">
+          <h1 className="font-serif text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-light leading-[0.95] tracking-tight mb-4 lg:mb-8">
             {home.titleLine1}
             {home.titleLine1 && home.titleHighlight && <br />}
             {home.titleHighlight && (
@@ -139,20 +145,20 @@ export default async function HomePage() {
             )}
           </h1>
           {home.subtitle && (
-            <p className="text-base font-extralight text-[#8a8478] max-w-md mx-auto mb-10 leading-relaxed">
+            <p className="hidden sm:block text-base font-extralight text-[#8a8478] max-w-md mx-auto mb-10 leading-relaxed">
               {home.subtitle}
             </p>
           )}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-row gap-3 sm:gap-4 justify-center">
             <Link
               href="/products"
-              className="px-8 py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
+              className="px-6 sm:px-8 py-3 sm:py-3.5 bg-amber-500 text-black text-[0.72rem] font-medium tracking-[0.2em] uppercase hover:bg-amber-400 transition-colors"
             >
               {home.primaryButton || "Explore Collection"}
             </Link>
             <Link
               href="/about"
-              className="px-8 py-3.5 border border-white/10 text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 hover:bg-amber-500/5 transition-all"
+              className="hidden sm:block px-8 py-3.5 border border-white/10 text-[0.72rem] font-light tracking-[0.2em] uppercase hover:border-amber-500/50 hover:bg-amber-500/5 transition-all"
             >
               {home.secondaryButton || "Our Story"}
             </Link>
@@ -162,7 +168,7 @@ export default async function HomePage() {
 
       {/* ═══ MARQUEE ═══ */}
       {home.marquee.length > 0 && (
-      <div className="py-3.5 border-y border-white/5 overflow-hidden">
+      <div className="order-3 lg:order-none py-3.5 border-y border-white/5 overflow-hidden">
         <div className="flex gap-12 animate-marquee whitespace-nowrap">
           {/* Listed twice so the scroll loops seamlessly. */}
           {[...home.marquee, ...home.marquee].map((text, i) => (
@@ -179,7 +185,7 @@ export default async function HomePage() {
       )}
 
       {/* ═══ CATEGORIES ═══ */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+      <section className="order-4 lg:order-none w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
         <div className="flex justify-between items-end mb-12">
           <div>
             {home.categoriesEyebrow && (
@@ -244,15 +250,15 @@ export default async function HomePage() {
       </section>
 
       {/* ═══ FEATURED PRODUCTS ═══ */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 lg:pb-28">
-        <div className="flex justify-between items-end mb-12">
+      <section className="order-2 lg:order-none w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 lg:pb-28">
+        <div className="flex justify-between items-end mb-5 lg:mb-12">
           <div>
             {home.featuredEyebrow && (
               <p className="text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-3">
                 {home.featuredEyebrow}
               </p>
             )}
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-light">
+            <h2 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-light">
               {home.featuredTitle}
             </h2>
           </div>
@@ -265,15 +271,37 @@ export default async function HomePage() {
           </Link>
         </div>
 
+        {/* Phones: shop by category straight away (computers have the tiles). */}
+        {categoriesWithProducts.length > 0 && (
+          <div className="lg:hidden -mx-4 px-4 mb-5 flex gap-2 overflow-x-auto [scrollbar-width:none]">
+            <Link
+              href="/products"
+              className="whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs bg-amber-500 text-black border-amber-500"
+            >
+              All
+            </Link>
+            {categoriesWithProducts.map((cat) => (
+              <Link
+                key={cat.slug}
+                href={`/products?category=${cat.slug}`}
+                className="whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs border-white/15 text-[#8a8478] hover:border-amber-500/50 hover:text-[#f5f0e8]"
+              >
+                {cat.name}
+              </Link>
+            ))}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          {featured.map((product) => {
+          {featured.map((product, i) => {
             const img =
               product.images?.find((i) => i.is_primary) || product.images?.[0]
             return (
               <Link
                 key={product.id}
                 href={`/products/${product.slug}`}
-                className="group"
+                // Computers show the first four.
+                className={`group ${i >= DESKTOP_PRODUCTS ? "lg:hidden" : ""}`}
               >
                 <div className="aspect-[3/4] bg-[#1a1918] border border-white/[0.03] relative overflow-hidden mb-4">
                   <div className="absolute inset-0 bg-gradient-radial from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
@@ -282,6 +310,8 @@ export default async function HomePage() {
                       image={img}
                       alt={product.name}
                       sizes="(min-width: 1024px) 300px, 50vw"
+                      // On phones the first row is on screen straight away.
+                      priority={i < 2}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -317,11 +347,18 @@ export default async function HomePage() {
             )
           })}
         </div>
+        <Link
+          href="/products"
+          className="lg:hidden mt-6 flex items-center justify-center gap-2 py-3 border border-white/10 text-[0.72rem] tracking-[0.15em] uppercase text-[#8a8478] hover:text-amber-400"
+        >
+          {home.featuredLink || "View All"}
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </section>
 
       {/* ═══ TESTIMONIALS (approved reviews) ═══ */}
       {testimonials.length > 0 && (
-        <section className="py-16 lg:py-24 border-y border-white/5 px-4">
+        <section className="order-5 lg:order-none py-16 lg:py-24 border-y border-white/5 px-4">
           {testimonialSettings.heading && (
             <p className="text-center text-[0.65rem] font-medium tracking-[0.35em] uppercase text-amber-400 mb-10">
               {testimonialSettings.heading}
@@ -344,7 +381,7 @@ export default async function HomePage() {
       {/* ═══ STORE PROMISES ═══ */}
       {promises.items.length > 0 && (
         <section
-          className={`grid grid-cols-2 ${PROMISE_COLS[promises.items.length] ?? "lg:grid-cols-4"} border-b border-white/5`}
+          className={`order-5 lg:order-none grid grid-cols-2 ${PROMISE_COLS[promises.items.length] ?? "lg:grid-cols-4"} border-b border-white/5`}
         >
           {promises.items.map((item, i) => {
             const Icon = CONTENT_ICONS[item.icon as keyof typeof CONTENT_ICONS]?.Icon ?? Lightbulb
@@ -363,7 +400,7 @@ export default async function HomePage() {
       )}
 
       {/* ═══ NEWSLETTER ═══ */}
-      <section className="py-16 lg:py-24 text-center px-4 relative">
+      <section className="order-5 lg:order-none py-16 lg:py-24 text-center px-4 relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[250px] bg-gradient-radial from-amber-500/[0.04] to-transparent pointer-events-none" />
         {newsletter.title && (
           <h2 className="font-serif text-2xl sm:text-3xl font-light mb-3 relative">
@@ -382,7 +419,7 @@ export default async function HomePage() {
           />
         </div>
       </section>
-    </>
+    </div>
   )
 }
 
