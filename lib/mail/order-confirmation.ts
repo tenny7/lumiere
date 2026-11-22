@@ -2,6 +2,7 @@ import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
+import { collectionDetailsFor } from "@/lib/orders/pickup"
 
 /**
  * Email the customer their "Order Confirmed" message, built from the charges
@@ -14,7 +15,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
     const { data: order } = await db
       .from("orders")
       .select(
-        "order_number, subtotal, discount_amount, delivery_fee, tax_amount, total, shipping_address, customer:profiles(email, full_name), items:order_items(product_name, quantity, unit_price, total_price)",
+        "order_number, subtotal, discount_amount, delivery_fee, tax_amount, total, shipping_address, delivery_method, delivery_note, customer:profiles(email, full_name), items:order_items(product_name, quantity, unit_price, total_price)",
       )
       .eq("id", orderId)
       .single()
@@ -61,6 +62,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
         city: address.city || "",
         region: address.region || "",
       },
+      collection: await collectionDetailsFor(order),
     })
 
     await sendMail({

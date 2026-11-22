@@ -5,6 +5,7 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatDateTime } from "@/lib/utils/format"
 import { PAYMENT_STATUS_LABELS } from "@/lib/utils/constants"
+import { deliveryMethodLabel, storeDelivers } from "@/lib/orders/delivery"
 import {
   isCodOrder,
   orderStatusLabel,
@@ -37,6 +38,7 @@ type Order = {
   currency: string
   status: string
   created_at: string
+  delivery_method?: string | null
   customer?: { full_name: string; email: string } | null
   payments?: { status: string; provider: string; provider_metadata?: unknown }[]
 }
@@ -73,8 +75,13 @@ export function OrderRow({ order }: { order: Order }) {
           variant="secondary"
           className={`text-[0.6rem] ${statusColors[orderStatusColorKey(order.status, cod)]}`}
         >
-          {orderStatusLabel(order.status, cod)}
+          {orderStatusLabel(order.status, cod, order.delivery_method)}
         </Badge>
+        {!storeDelivers(order.delivery_method) && (
+          <p className="text-[0.65rem] text-muted-foreground mt-1">
+            {deliveryMethodLabel(order.delivery_method)}
+          </p>
+        )}
       </TableCell>
       <TableCell>
         {payment ? (

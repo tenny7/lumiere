@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { ORDER_STATUS_LABELS } from "@/lib/utils/constants"
+import { collectionStatusLabel, storeDelivers } from "@/lib/orders/delivery"
 import { notifyOrdersUpdated } from "@/hooks/use-orders-needing-attention"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -31,12 +32,15 @@ const NEXT_STATUSES: Record<string, string[]> = {
 export function OrderStatusUpdater({
   orderId,
   currentStatus,
+  deliveryMethod,
   trackingNumber: initialTracking = "",
   trackingCarrier: initialCarrier = "",
   trackingUrl: initialUrl = "",
 }: {
   orderId: string
   currentStatus: string
+  /** Collection orders read "Ready for collection" and have no tracking. */
+  deliveryMethod?: string | null
   trackingNumber?: string
   trackingCarrier?: string
   trackingUrl?: string
@@ -49,7 +53,9 @@ export function OrderStatusUpdater({
   const router = useRouter()
 
   const options = NEXT_STATUSES[currentStatus] ?? []
-  const showTracking = status === "shipped"
+  const showTracking = status === "shipped" && storeDelivers(deliveryMethod)
+  const label = (s: string) =>
+    collectionStatusLabel(s, deliveryMethod) ?? ORDER_STATUS_LABELS[s]
 
   const [saving, setSaving] = useState(false)
 
@@ -96,7 +102,7 @@ export function OrderStatusUpdater({
         <SelectContent>
           {options.map((s) => (
             <SelectItem key={s} value={s}>
-              {ORDER_STATUS_LABELS[s]}
+              {label(s)}
             </SelectItem>
           ))}
         </SelectContent>

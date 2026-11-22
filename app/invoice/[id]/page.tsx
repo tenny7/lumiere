@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { paymentMethodLabel } from "@/lib/utils/order-display"
+import { deliveryMethodLabel, storeDelivers } from "@/lib/orders/delivery"
 import { PrintButton } from "./print-button"
 import { ReceiptPdfButton, type ReceiptData } from "./receipt-pdf-button"
 
@@ -146,9 +147,11 @@ export default async function InvoicePage({
     currency,
     billToName: ship.full_name || order.customer?.full_name || "Customer",
     billToEmail: order.customer?.email || "",
-    billToAddress: [ship.line_1, ship.line_2, ship.city, ship.region, ship.country]
-      .filter(Boolean)
-      .join(", "),
+    billToAddress: storeDelivers(order.delivery_method)
+      ? [ship.line_1, ship.line_2, ship.city, ship.region, ship.country]
+          .filter(Boolean)
+          .join(", ")
+      : deliveryMethodLabel(order.delivery_method),
     billToPhone: ship.phone || order.customer?.phone || "",
     items: items.map((it) => ({
       name: it.product_name,
@@ -234,6 +237,11 @@ export default async function InvoicePage({
             {(ship.city || ship.region) && (
               <p className="text-sm text-neutral-500">
                 {[ship.city, ship.region, ship.country].filter(Boolean).join(", ")}
+              </p>
+            )}
+            {!storeDelivers(order.delivery_method) && (
+              <p className="text-sm text-neutral-500">
+                {deliveryMethodLabel(order.delivery_method)}
               </p>
             )}
             {(ship.phone || order.customer?.phone) && (

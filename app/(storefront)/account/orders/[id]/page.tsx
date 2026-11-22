@@ -10,6 +10,12 @@ import {
 } from "@/lib/utils/order-display"
 import { ArrowLeft, MapPin, Check, Truck, ExternalLink, MessageSquare } from "lucide-react"
 import { OrderAutoRefresh } from "@/components/storefront/order-auto-refresh"
+import {
+  collectionStatusLabel,
+  deliveryMethodLabel,
+  storeDelivers,
+} from "@/lib/orders/delivery"
+import { getPickupDetails } from "@/lib/orders/pickup"
 
 // Always reflect the latest status/tracking (no stale cache).
 export const dynamic = "force-dynamic"
@@ -95,6 +101,8 @@ export default async function OrderDetailPage({
     .is("read_at", null)
 
   const address = (order.shipping_address || {}) as ShippingAddress
+  const delivers = storeDelivers(order.delivery_method)
+  const pickup = delivers ? null : await getPickupDetails().catch(() => null)
   const currency: string = order.currency || "RWF"
 
   const isCancelled = order.status === "cancelled" || order.status === "refunded"
@@ -127,7 +135,7 @@ export default async function OrderDetailPage({
             <span
               className={`inline-flex px-2 py-0.5 text-[0.6rem] font-medium tracking-[0.1em] uppercase border ${STATUS_COLORS[orderStatusColorKey(order.status, cod)] || STATUS_COLORS.pending}`}
             >
-              {orderStatusLabel(order.status, cod)}
+              {orderStatusLabel(order.status, cod, order.delivery_method)}
             </span>
             {payment?.status && (
               <span
@@ -207,7 +215,8 @@ export default async function OrderDetailPage({
                           done ? "text-[#f5f0e8]" : "text-[#8a8478]"
                         }`}
                       >
-                        {ORDER_STATUS_LABELS[step]}
+                        {collectionStatusLabel(step, order.delivery_method) ??
+                          ORDER_STATUS_LABELS[step]}
                       </span>
                     </div>
                     {!isLast && (
@@ -344,8 +353,58 @@ export default async function OrderDetailPage({
           </div>
         </div>
 
+        {/* Where to collect the order */}
+        {!delivers && (
+          <div className="mb-8">
+            <h2 className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-4">
+              {deliveryMethodLabel(order.delivery_method)}
+            </h2>
+            <div className="bg-[#1a1918] border border-white/[0.03] p-5">
+              <div className="flex items-start gap-3">
+                <MapPin className="w-4 h-4 text-[#8a8478] mt-0.5 flex-shrink-0" />
+                <div className="text-sm space-y-1">
+                  <p>
+                    {order.delivery_method === "pickup"
+                      ? "Collect your order from:"
+                      : "Your rider collects your order from:"}
+                  </p>
+                  <p className="text-[#8a8478] whitespace-pre-line">
+                    {pickup?.address || "Our shop. We'll confirm the address by email."}
+                  </p>
+                  {pickup?.openingHours.map((h) => (
+                    <p key={h} className="text-xs text-[#8a8478]">
+                      {h}
+                    </p>
+                  ))}
+                  {pickup?.mapUrl && (
+                    <a
+                      href={pickup.mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-xs text-amber-400 hover:text-amber-300"
+                    >
+                      Get directions
+                    </a>
+                  )}
+                  {pickup?.instructions && (
+                    <p className="text-xs text-[#8a8478] whitespace-pre-line">
+                      {pickup.instructions}
+                    </p>
+                  )}
+                  {order.delivery_note && (
+                    <p className="text-xs text-[#8a8478]">Your note: {order.delivery_note}</p>
+                  )}
+                  <p className="text-xs text-[#8a8478]">
+                    We&apos;ll email you when it&apos;s ready to collect.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Shipping Address */}
-        {(address.line_1 || address.full_name) && (
+        {delivers && (address.line_1 || address.full_name) && (
           <div className="mb-8">
             <h2 className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-4">
               Shipping Address

@@ -115,6 +115,9 @@ export interface Order {
   total: number
   currency: string
   shipping_address: Address
+  /** delivery | pickup | self_arranged (lib/orders/delivery.ts, 00026). */
+  delivery_method: string
+  delivery_note: string | null
   coupon_id: string | null
   notes: string | null
   created_at: string

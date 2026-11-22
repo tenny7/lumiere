@@ -12,15 +12,32 @@ import { getStoreCurrency, getPricingSettings } from "@/lib/utils/settings"
 import { computeOrderTotals } from "@/lib/utils/pricing"
 import { normalizeInternationalPhone } from "@/lib/utils/phone"
 import { z } from "zod"
+import {
+  DELIVERY_METHOD_VALUES,
+  storeDelivers,
+  type DeliveryMethod,
+} from "@/lib/orders/delivery"
+import { getDeliveryMethods } from "@/lib/orders/pickup"
 
-const shippingSchema = z.object({
-  fullName: z.string().min(2).max(100),
-  phone: z.string().min(1).max(30),
-  line1: z.string().min(3).max(200),
-  city: z.string().min(2).max(100),
-  region: z.string().max(100).optional(),
-  couponCode: z.string().max(50).optional(),
-})
+const shippingSchema = z
+  .object({
+    fullName: z.string().min(2).max(100),
+    phone: z.string().min(1).max(30),
+    deliveryMethod: z.enum(DELIVERY_METHOD_VALUES as [DeliveryMethod, ...DeliveryMethod[]]).default("delivery"),
+    // Who collects and when, for an own rider.
+    deliveryNote: z.string().max(500).optional(),
+    line1: z.string().max(200).optional(),
+    city: z.string().max(100).optional(),
+    region: z.string().max(100).optional(),
+    couponCode: z.string().max(50).optional(),
+  })
+  // An address is needed only when the store delivers.
+  .refine(
+    (d) =>
+      !storeDelivers(d.deliveryMethod) ||
+      ((d.line1?.trim().length ?? 0) >= 3 && (d.city?.trim().length ?? 0) >= 2),
+    { message: "Please enter your delivery address and city.", path: ["line1"] },
+  )
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,13 +54,30 @@ export async function POST(request: NextRequest) {
     const parsed = shippingSchema.safeParse(body)
 
     if (!parsed.success) {
+      // Show the address message when that's what's missing.
+      const addressMissing = parsed.error.issues.some((i) => i.path[0] === "line1")
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten() },
+        {
+          error: addressMissing ? "Please enter your delivery address and city." : "Invalid input",
+          details: parsed.error.flatten(),
+        },
         { status: 400 },
       )
     }
 
-    const { fullName, phone: rawPhone, line1, city, region, couponCode } = parsed.data
+    const { fullName, phone: rawPhone, deliveryMethod, region, couponCode } = parsed.data
+    const delivers = storeDelivers(deliveryMethod)
+    const line1 = delivers ? parsed.data.line1!.trim() : ""
+    const city = delivers ? parsed.data.city!.trim() : ""
+    const deliveryNote = delivers ? null : parsed.data.deliveryNote?.trim() || null
+
+    // Only the methods switched on in Admin → Settings → Payments.
+    if (!(await getDeliveryMethods()).includes(deliveryMethod)) {
+      return NextResponse.json(
+        { error: "That delivery option isn't available. Please choose another." },
+        { status: 400 },
+      )
+    }
 
     const normalizedPhone = normalizeInternationalPhone(rawPhone)
     if (!normalizedPhone) {
@@ -149,6 +183,7 @@ export async function POST(request: NextRequest) {
       couponFreeShipping: freeShipping,
       settings: pricing,
       currency,
+      storeDelivers: delivers,
     })
 
     // Create order with server-calculated total
@@ -163,12 +198,15 @@ export async function POST(request: NextRequest) {
         total,
         currency,
         coupon_id: couponId,
+        delivery_method: deliveryMethod,
+        delivery_note: deliveryNote,
+        // Name and phone always; the address only when the store delivers.
         shipping_address: {
           full_name: fullName,
           phone,
           line_1: line1,
           city,
-          region: region || "",
+          region: delivers ? region || "" : "",
           country: "Rwanda",
         },
       })
@@ -201,30 +239,32 @@ export async function POST(request: NextRequest) {
 
     // Remember this address in the customer's address book so it's prefilled
     // next time (dedupe by line_1 + city; best-effort — never fail the order).
-    try {
-      const { data: existingAddr } = await adminDb
-        .from("addresses")
-        .select("id")
-        .eq("profile_id", user.id)
-        .ilike("line_1", line1)
-        .ilike("city", city)
-        .maybeSingle()
-      if (!existingAddr) {
-        const { count } = await adminDb
+    if (delivers) {
+      try {
+        const { data: existingAddr } = await adminDb
           .from("addresses")
-          .select("id", { count: "exact", head: true })
+          .select("id")
           .eq("profile_id", user.id)
-        await adminDb.from("addresses").insert({
-          profile_id: user.id,
-          line_1: line1,
-          city,
-          region: region || null,
-          country: "Rwanda",
-          is_default: (count ?? 0) === 0,
-        })
+          .ilike("line_1", line1)
+          .ilike("city", city)
+          .maybeSingle()
+        if (!existingAddr) {
+          const { count } = await adminDb
+            .from("addresses")
+            .select("id", { count: "exact", head: true })
+            .eq("profile_id", user.id)
+          await adminDb.from("addresses").insert({
+            profile_id: user.id,
+            line_1: line1,
+            city,
+            region: region || null,
+            country: "Rwanda",
+            is_default: (count ?? 0) === 0,
+          })
+        }
+      } catch (e) {
+        console.error("Address book save failed:", e)
       }
-    } catch (e) {
-      console.error("Address book save failed:", e)
     }
 
     // The coupon's use is counted when the order is actually placed (COD,

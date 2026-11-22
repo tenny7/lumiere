@@ -7,6 +7,8 @@ import {
   renderDeliveredEmail,
 } from "@/lib/emails/render"
 import { deductStock, restoreStock } from "@/lib/orders/fulfilment"
+import { storeDelivers } from "@/lib/orders/delivery"
+import { collectionDetailsFor } from "@/lib/orders/pickup"
 import { z } from "zod"
 import { can } from "@/lib/permissions"
 
@@ -77,7 +79,7 @@ export async function POST(
       .update(updates)
       .eq("id", id)
       .select(
-        "order_number, tracking_number, tracking_carrier, tracking_url, customer:profiles(full_name, email)",
+        "order_number, tracking_number, tracking_carrier, tracking_url, delivery_method, delivery_note, customer:profiles(full_name, email)",
       )
       .single()
 
@@ -117,11 +119,12 @@ export async function POST(
             from: EMAIL_FROM,
             replyTo: EMAIL_REPLY_TO,
             to: customer.email,
-            subject: `Your order has been delivered — ${order.order_number}`,
+            subject: `Your order has been ${storeDelivers(order.delivery_method) ? "delivered" : "collected"} — ${order.order_number}`,
             html: renderDeliveredEmail({
               customerName: customer.full_name || "there",
               orderNumber: order.order_number,
               orderUrl: `${appUrl}/account/orders/${id}`,
+              collected: !storeDelivers(order.delivery_method),
             }),
           })
         } catch (emailError) {
@@ -138,18 +141,23 @@ export async function POST(
       }
       if (customer?.email) {
         try {
+          // Orders the customer collects get "ready to collect" instead.
+          const collection = await collectionDetailsFor(order)
           const html = renderShippingNotificationEmail({
             customerName: customer.full_name || "Customer",
             orderNumber: order.order_number,
             trackingNumber: order.tracking_number || undefined,
             trackingCarrier: order.tracking_carrier || undefined,
             trackingUrl: order.tracking_url || undefined,
+            collection,
           })
           await sendMail({
             from: EMAIL_FROM,
             replyTo: EMAIL_REPLY_TO,
             to: customer.email,
-            subject: `Your order has shipped — ${order.order_number}`,
+            subject: collection
+              ? `Your order is ready to collect — ${order.order_number}`
+              : `Your order has shipped — ${order.order_number}`,
             html,
           })
         } catch (emailError) {

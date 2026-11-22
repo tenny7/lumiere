@@ -72,7 +72,7 @@ export default async function OrdersPage() {
                     <span
                       className={`inline-flex px-2 py-0.5 text-[0.6rem] font-medium tracking-[0.1em] uppercase border ${STATUS_COLORS[orderStatusColorKey(order.status, cod)] || STATUS_COLORS.pending}`}
                     >
-                      {orderStatusLabel(order.status, cod)}
+                      {orderStatusLabel(order.status, cod, order.delivery_method)}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-[#8a8478]">

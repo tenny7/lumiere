@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { PAYMENT_METHODS } from "@/lib/utils/constants"
+import {
+  DELIVERY_METHODS,
+  parseDeliveryMethods,
+  type DeliveryMethod,
+} from "@/lib/orders/delivery"
+import { Textarea } from "@/components/ui/textarea"
 import { SettingsNav } from "@/components/admin/settings-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -56,10 +62,14 @@ const TEXT_FIELDS = [
   },
 ] as const
 
+// Shown to customers who collect their order or send their own rider.
+const PICKUP_FIELD = { key: "pickup_instructions" } as const
+
 export default function PaymentSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [original, setOriginal] = useState<Record<string, string>>({})
   const [activeProviders, setActiveProviders] = useState<string[]>(ALL_PROVIDER_VALUES)
+  const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>(["delivery"])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -75,6 +85,9 @@ export default function PaymentSettingsPage() {
       setOriginal(map)
       const apRow = data?.find((r) => r.key === "active_payment_providers")
       setActiveProviders(parseProviders(apRow?.value) ?? ALL_PROVIDER_VALUES)
+      setDeliveryMethods(
+        parseDeliveryMethods(data?.find((r) => r.key === "delivery_methods")?.value),
+      )
       setLoading(false)
     }
     load()
@@ -103,10 +116,31 @@ export default function PaymentSettingsPage() {
     }
   }
 
+  async function toggleDeliveryMethod(value: DeliveryMethod) {
+    const next = deliveryMethods.includes(value)
+      ? deliveryMethods.filter((v) => v !== value)
+      : DELIVERY_METHODS.map((m) => m.value).filter(
+          (v) => v === value || deliveryMethods.includes(v),
+        )
+    if (next.length === 0) {
+      toast.error("Keep at least one delivery option on")
+      return
+    }
+    setDeliveryMethods(next)
+    const { error } = await createClient()
+      .from("store_settings")
+      .upsert({ key: "delivery_methods", value: next }, { onConflict: "key" })
+    if (error) {
+      toast.error("Failed to update delivery options")
+    } else {
+      toast.success("Delivery options updated")
+    }
+  }
+
   async function handleSave() {
     setSaving(true)
     const supabase = createClient()
-    const upserts = [...FIELDS, ...TEXT_FIELDS].map((f) => ({
+    const upserts = [...FIELDS, ...TEXT_FIELDS, PICKUP_FIELD].map((f) => ({
       key: f.key,
       value: settings[f.key] ?? "",
     }))
@@ -122,7 +156,7 @@ export default function PaymentSettingsPage() {
     setSaving(false)
   }
 
-  const hasChanges = [...FIELDS, ...TEXT_FIELDS].some(
+  const hasChanges = [...FIELDS, ...TEXT_FIELDS, PICKUP_FIELD].some(
     (f) => settings[f.key] !== original[f.key],
   )
 
@@ -194,6 +228,54 @@ export default function PaymentSettingsPage() {
               </Button>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-base">Delivery Options</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <p className="text-sm text-muted-foreground mb-3">
+            How customers can get their order. With more than one on, checkout
+            asks them to choose. Collection and own delivery have no delivery
+            fee and are paid online first, so Cash on Delivery is hidden for
+            them. They are offered only while MoMo Transfer or MTN MoMo is on.
+          </p>
+          {DELIVERY_METHODS.map((m) => (
+            <div
+              key={m.value}
+              className="flex items-center justify-between gap-4 py-2.5 border-b last:border-0"
+            >
+              <div>
+                <p className="text-sm font-medium">{m.label}</p>
+                <p className="text-xs text-muted-foreground">{m.description}</p>
+              </div>
+              <Switch
+                checked={deliveryMethods.includes(m.value)}
+                onCheckedChange={() => toggleDeliveryMethod(m.value)}
+                aria-label={`Toggle ${m.label}`}
+                disabled={loading}
+              />
+            </div>
+          ))}
+          <div className="space-y-2 pt-4">
+            <Label htmlFor="pickup_instructions">Collection instructions (optional)</Label>
+            <Textarea
+              id="pickup_instructions"
+              rows={3}
+              maxLength={500}
+              placeholder="e.g. Bring your order number. Riders should call +250 7XX XXX XXX on arrival."
+              value={settings.pickup_instructions ?? ""}
+              onChange={(e) =>
+                setSettings((prev) => ({ ...prev, pickup_instructions: e.target.value }))
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              The shop address, opening hours and map link come from Content →
+              Contact &amp; Showroom. Save with the Save Settings button above.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

@@ -635,8 +635,19 @@ export default function AdminGuidePage() {
                 ["MoMo Account Name", "Shown under the number so customers know they're paying you."],
                 ["MoMo USSD code", "Optional dial code shown at checkout. Type {amount} where the order total goes, e.g. *182*1*1*07XXXXXXXX*{amount}#. Test it yourself first."],
                 ["Payment Methods switches", "Turn each method on or off at checkout. Saves instantly; at least one must stay on."],
+                ["Delivery Options switches", "Deliver to me, Collect from the shop, Arrange my own delivery. With more than one on, checkout asks the customer to choose. Saves instantly; at least one must stay on."],
+                ["Collection instructions", "Optional note shown to customers who collect, e.g. what to bring. The shop address, hours and map link come from Content → Contact & Showroom."],
               ]}
             />
+            <Callout tone="info" title="Collection and own delivery">
+              No delivery fee and no address. They are paid online first, so
+              Cash on Delivery is hidden for them, and they are offered only
+              while MoMo Transfer or MTN Mobile Money is on. On the order, the
+              statuses read <UI>Ready for collection</UI> (instead of Shipped,
+              which emails the customer to come) and <UI>Collected</UI>{" "}
+              (instead of Delivered). A rider&apos;s note from the customer
+              shows on the order page.
+            </Callout>
             <Callout tone="info" title="How the checkout total is worked out">
               Items − discount, then + VAT on that, then + delivery (free above
               the threshold or with a free-shipping coupon). Rounded to whole

@@ -22,6 +22,33 @@ interface ShippingAddress {
   region: string
 }
 
+/** For orders the customer collects (lib/orders/delivery.ts). */
+export interface CollectionDetails {
+  /** "pickup" or "self_arranged". */
+  method: string
+  address: string
+  openingHours: string[]
+  instructions: string
+  /** The customer's note for their rider. */
+  note?: string | null
+}
+
+function collectionBlock(c: CollectionDetails): string {
+  const heading = c.method === "pickup" ? "Collect From" : "Your Rider Collects From"
+  const lines = [
+    escapeHtml(c.address || "Our shop. We'll confirm the address by email.").replace(/\n/g, "<br>"),
+    ...c.openingHours.map((h) => `<span style="color:#a8a294">${escapeHtml(h)}</span>`),
+    ...(c.instructions
+      ? [`<span style="color:#a8a294">${escapeHtml(c.instructions).replace(/\n/g, "<br>")}</span>`]
+      : []),
+    ...(c.note ? [`<span style="color:#a8a294">Your note: ${escapeHtml(c.note)}</span>`] : []),
+  ]
+  return `<div style="background-color:#1a1a16;border-radius:6px;padding:20px;margin-bottom:32px">
+      <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#7a7568;margin:0 0 8px 0">${heading}</p>
+      <p style="font-size:14px;line-height:22px;color:#f5f0e8;margin:0">${lines.join("<br>")}</p>
+    </div>`
+}
+
 export function renderOrderConfirmationEmail(props: {
   customerName: string
   orderNumber: string
@@ -32,6 +59,8 @@ export function renderOrderConfirmationEmail(props: {
   tax?: number
   total: number
   shippingAddress: ShippingAddress
+  /** Set when the customer collects the order; replaces the address. */
+  collection?: CollectionDetails | null
 }): string {
   const {
     customerName,
@@ -43,6 +72,7 @@ export function renderOrderConfirmationEmail(props: {
     tax = 0,
     total,
     shippingAddress,
+    collection,
   } = props
   const orderDate = new Date().toLocaleDateString("en-GB", {
     day: "numeric",
@@ -125,11 +155,15 @@ export function renderOrderConfirmationEmail(props: {
         <span style="font-size:16px;font-weight:600;color:#c9a96e">${money(total)}</span>
       </div>
     </div>
-    <div style="background-color:#1a1a16;border-radius:6px;padding:20px;margin-bottom:32px">
+    ${
+      collection
+        ? collectionBlock(collection)
+        : `<div style="background-color:#1a1a16;border-radius:6px;padding:20px;margin-bottom:32px">
       <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#7a7568;margin:0 0 8px 0">Shipping Address</p>
       <p style="font-size:14px;line-height:22px;color:#f5f0e8;margin:0">${escapeHtml(shippingAddress.fullName)}<br>${escapeHtml(shippingAddress.line1)}<br>${escapeHtml(shippingAddress.city)}, ${escapeHtml(shippingAddress.region)}</p>
-    </div>
-    <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">We will notify you when your order ships. If you have any questions, reply to this email.</p>
+    </div>`
+    }
+    <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">We will notify you when your order ${collection ? "is ready to collect" : "ships"}. If you have any questions, reply to this email.</p>
   </div>
   <div style="padding:24px 40px;border-top:1px solid #2a2a24;text-align:center">
     <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Ajabu Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Ajabu Lighting. All rights reserved.</p>
@@ -146,8 +180,11 @@ export function renderShippingNotificationEmail(props: {
   trackingNumber?: string
   trackingCarrier?: string
   trackingUrl?: string
+  /** Set when the customer collects the order: "ready to collect" instead. */
+  collection?: CollectionDetails | null
 }): string {
-  const { customerName, orderNumber, trackingNumber, trackingCarrier, trackingUrl } = props
+  const { customerName, orderNumber, trackingNumber, trackingCarrier, trackingUrl, collection } = props
+  if (collection) return renderReadyForCollectionEmail(customerName, orderNumber, collection)
   const trackingBlock = trackingNumber
     ? `<div style="background-color:#1a1a16;border-radius:6px;padding:20px;margin-bottom:24px">
       <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#7a7568;margin:0 0 8px 0">Tracking</p>
@@ -184,13 +221,11 @@ export function renderShippingNotificationEmail(props: {
 </html>`
 }
 
-export function renderDeliveredEmail(props: {
-  customerName: string
-  orderNumber: string
-  /** Link to the customer's order page (reviews, support chat). */
-  orderUrl: string
-}): string {
-  const { customerName, orderNumber, orderUrl } = props
+function renderReadyForCollectionEmail(
+  customerName: string,
+  orderNumber: string,
+  collection: CollectionDetails,
+): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -201,8 +236,42 @@ export function renderDeliveredEmail(props: {
     <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">AJABU LIGHTING</h1>
   </div>
   <div style="padding:40px">
-    <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Your order has been delivered</h2>
-    <p style="font-size:15px;line-height:24px;color:#a8a294;margin:0 0 24px 0">Hi ${escapeHtml(customerName)}, your order <strong style="color:#f5f0e8">${escapeHtml(orderNumber)}</strong> has been delivered. We hope you love your new lighting.</p>
+    <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Your order is ready to collect!</h2>
+    <p style="font-size:15px;line-height:24px;color:#a8a294;margin:0 0 24px 0">Hi ${escapeHtml(customerName)}, your order <strong style="color:#f5f0e8">${escapeHtml(orderNumber)}</strong> is packed and waiting. Please bring your order number.</p>
+    ${collectionBlock(collection)}
+    <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">If you have any questions, reply to this email.</p>
+  </div>
+  <div style="padding:24px 40px;border-top:1px solid #2a2a24;text-align:center">
+    <p style="font-size:12px;color:#5a5548;margin:0;line-height:20px">Ajabu Lighting &middot; Kigali, Rwanda<br>&copy; ${new Date().getFullYear()} Ajabu Lighting. All rights reserved.</p>
+  </div>
+</div>
+</div>
+</body>
+</html>`
+}
+
+export function renderDeliveredEmail(props: {
+  customerName: string
+  orderNumber: string
+  /** Link to the customer's order page (reviews, support chat). */
+  orderUrl: string
+  /** The customer collected it (pickup or own rider). */
+  collected?: boolean
+}): string {
+  const { customerName, orderNumber, orderUrl, collected = false } = props
+  const done = collected ? "collected" : "delivered"
+  return `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background-color:#0a0a08;color:#f5f0e8">
+<div style="max-width:600px;margin:0 auto;padding:40px 20px">
+<div style="background-color:#141410;border-radius:8px;overflow:hidden">
+  <div style="padding:32px 40px;border-bottom:1px solid #2a2a24;text-align:center">
+    <h1 style="font-size:28px;font-weight:300;letter-spacing:6px;color:#c9a96e;margin:0">AJABU LIGHTING</h1>
+  </div>
+  <div style="padding:40px">
+    <h2 style="font-size:22px;font-weight:400;color:#f5f0e8;margin:0 0 8px 0">Your order has been ${done}</h2>
+    <p style="font-size:15px;line-height:24px;color:#a8a294;margin:0 0 24px 0">Hi ${escapeHtml(customerName)}, your order <strong style="color:#f5f0e8">${escapeHtml(orderNumber)}</strong> has been ${done}. We hope you love your new lighting.</p>
     <p style="margin:0 0 28px 0"><a href="${escapeHtml(orderUrl)}" style="display:inline-block;background-color:#c9a96e;color:#0a0a08;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:4px">View your order &amp; leave a review</a></p>
     <p style="font-size:14px;line-height:22px;color:#a8a294;margin:0">If anything isn't right, reply to this email or message us from your order page and we'll sort it out.</p>
   </div>

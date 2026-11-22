@@ -5,6 +5,7 @@ import { getPaymentStatus } from "@/lib/momo/client"
 import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
+import { collectionDetailsFor } from "@/lib/orders/pickup"
 import { deductStock, redeemCoupon } from "@/lib/orders/fulfilment"
 
 export async function GET(
@@ -27,7 +28,7 @@ export async function GET(
     const { data: payment, error } = await adminDb
       .from("payments")
       .select(
-        "*, orders(customer_id, order_number, subtotal, discount_amount, delivery_fee, tax_amount, total, currency, status, shipping_address)",
+        "*, orders(customer_id, order_number, subtotal, discount_amount, delivery_fee, tax_amount, total, currency, status, shipping_address, delivery_method, delivery_note)",
       )
       .eq("id", id)
       .single()
@@ -147,6 +148,7 @@ export async function GET(
               city: address.city || "",
               region: address.region || "",
             },
+            collection: await collectionDetailsFor(payment.orders),
         })
 
         await sendMail({

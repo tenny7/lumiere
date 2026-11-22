@@ -5,6 +5,7 @@ import { COD_METHOD_VALUE } from "@/lib/utils/constants"
 import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { z } from "zod"
 import { redeemCoupon } from "@/lib/orders/fulfilment"
+import { storeDelivers } from "@/lib/orders/delivery"
 
 const codSchema = z.object({
   orderId: z.string().uuid(),
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Verify the order belongs to this user and is still pending.
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, order_number, total, currency, status, customer_id, shipping_address")
+      .select("id, order_number, total, currency, status, customer_id, shipping_address, delivery_method")
       .eq("id", orderId)
       .single()
 
@@ -50,6 +51,13 @@ export async function POST(request: NextRequest) {
     }
     if (order.customer_id !== user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+    // Orders the customer collects are paid online first.
+    if (!storeDelivers(order.delivery_method)) {
+      return NextResponse.json(
+        { error: "Orders you collect are paid online first. Please choose Mobile Money." },
+        { status: 400 },
+      )
     }
     if (order.status !== "pending") {
       return NextResponse.json(

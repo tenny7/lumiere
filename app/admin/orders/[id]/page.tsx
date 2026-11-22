@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table"
 import { ArrowLeft, User, MapPin, CreditCard, FileText } from "lucide-react"
 import { OrderStatusUpdater } from "./status-updater"
+import { deliveryMethodLabel, storeDelivers } from "@/lib/orders/delivery"
 import { MarkPaidButton } from "@/components/admin/mark-paid-button"
 import { MessageSquare, ArrowUpRight } from "lucide-react"
 import { can } from "@/lib/permissions"
@@ -195,7 +196,7 @@ export default async function OrderDetailPage({
             variant="secondary"
             className={`text-[0.6rem] ${statusColors[orderStatusColorKey(order.status, isCodPayment)]}`}
           >
-            {orderStatusLabel(order.status, isCodPayment)}
+            {orderStatusLabel(order.status, isCodPayment, order.delivery_method)}
           </Badge>
           {payment && (
             <Badge
@@ -468,6 +469,7 @@ export default async function OrderDetailPage({
                 <OrderStatusUpdater
                   orderId={order.id}
                   currentStatus={order.status}
+                  deliveryMethod={order.delivery_method}
                   trackingNumber={order.tracking_number || ""}
                   trackingCarrier={order.tracking_carrier || ""}
                   trackingUrl={order.tracking_url || ""}
@@ -493,8 +495,37 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
 
+          {/* How the customer gets the order */}
+          {!storeDelivers(order.delivery_method) && (
+            <Card>
+              <CardHeader className="flex flex-row items-center gap-2">
+                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-base">
+                  {deliveryMethodLabel(order.delivery_method)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                <p>
+                  {order.delivery_method === "pickup"
+                    ? "The customer collects the order from the shop."
+                    : "The customer's own rider collects the order from the shop."}{" "}
+                  No delivery to arrange. Paid online before collection.
+                </p>
+                {order.delivery_note && (
+                  <p className="text-muted-foreground whitespace-pre-line">
+                    Note: {order.delivery_note}
+                  </p>
+                )}
+                <p className="text-muted-foreground">
+                  Set the status to Ready for collection when it&apos;s packed;
+                  the customer is emailed.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Shipping Address */}
-          {address && (
+          {address && storeDelivers(order.delivery_method) && (
             <Card>
               <CardHeader className="flex flex-row items-center gap-2">
                 <MapPin className="w-4 h-4 text-muted-foreground" />

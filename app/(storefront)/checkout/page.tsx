@@ -20,6 +20,11 @@ import {
   MOMO_MANUAL_METHOD,
   MOMO_MANUAL_VALUE,
 } from "@/lib/utils/constants"
+import {
+  DELIVERY_METHODS,
+  storeDelivers,
+  type DeliveryMethod,
+} from "@/lib/orders/delivery"
 import { Loader2, CheckCircle2, XCircle, Phone, MapPin, Plus, Banknote, Smartphone, Clock } from "lucide-react"
 import { toast } from "sonner"
 
@@ -38,6 +43,19 @@ export default function CheckoutPage() {
       variant: { name: string; price_adjustment: number } | null
     }>
   >([])
+
+  // How the customer gets the order (Admin → Settings → Payments decides
+  // which methods are offered; collection is paid online first).
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("delivery")
+  const [offeredMethods, setOfferedMethods] = useState<DeliveryMethod[]>(["delivery"])
+  const [pickup, setPickup] = useState<{
+    address: string
+    openingHours: string[]
+    mapUrl: string
+    instructions: string
+  } | null>(null)
+  const [deliveryNote, setDeliveryNote] = useState("")
+  const delivers = storeDelivers(deliveryMethod)
 
   // Shipping
   const [fullName, setFullName] = useState("")
@@ -233,6 +251,16 @@ export default function CheckoutPage() {
       }
     }
     loadCart()
+    fetch("/api/delivery-options")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return
+        if (Array.isArray(data.methods) && data.methods.length > 0) {
+          setOfferedMethods(data.methods)
+        }
+        setPickup(data.pickup ?? null)
+      })
+      .catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Steps are swapped in-place (not routed), so scroll back to the top when the
@@ -272,8 +300,15 @@ export default function CheckoutPage() {
     couponFreeShipping: !!appliedCoupon?.freeShipping,
     settings: pricing,
     currency: storeCurrency,
+    storeDelivers: delivers,
   })
   const { discount, deliveryFee, taxAmount, total } = estimate
+  // Collection must be paid online, so it's offered only when an online
+  // method (MoMo transfer or MoMo checkout) is switched on.
+  const canPayOnline = momoManualEnabled || availableProviders.length > 0
+  const methodsShown = DELIVERY_METHODS.filter(
+    (m) => offeredMethods.includes(m.value) && (m.value === "delivery" || canPayOnline),
+  )
   // Charges shown on the payment step: the server-computed figures once the
   // order exists (what the admin verifies a transfer against), else the
   // cart estimate.
@@ -335,9 +370,11 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           fullName,
           phone,
-          line1,
-          city,
-          region,
+          deliveryMethod,
+          deliveryNote: delivers ? undefined : deliveryNote,
+          line1: delivers ? line1 : undefined,
+          city: delivers ? city : undefined,
+          region: delivers ? region : undefined,
           couponCode: appliedCoupon?.code,
         }),
       })
@@ -359,6 +396,10 @@ export default function CheckoutPage() {
         taxAmount: Number(data.taxAmount),
         total: Number(data.total),
       })
+      // Collection is paid online first: move off Cash on Delivery.
+      if (!delivers && provider === COD_METHOD_VALUE) {
+        setProvider(momoManualEnabled ? MOMO_MANUAL_VALUE : availableProviders[0]?.value ?? provider)
+      }
       setStep("payment")
     } catch {
       toast.error("Network error. Please try again.")
@@ -528,7 +569,7 @@ export default function CheckoutPage() {
         {step === "shipping" && (
           <div>
             <h1 className="font-serif text-2xl font-light mb-8">
-              Shipping Information
+              {delivers ? "Shipping Information" : "Your Details"}
             </h1>
             <form
               onSubmit={(e) => {
@@ -562,8 +603,92 @@ export default function CheckoutPage() {
                   className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
+              {/* How the customer gets the order */}
+              {methodsShown.length > 1 && (
+                <div>
+                  <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                    How would you like to get your order?
+                  </label>
+                  <div className="grid gap-2 sm:grid-cols-3" role="radiogroup">
+                    {methodsShown.map((m) => {
+                      const active = deliveryMethod === m.value
+                      return (
+                        <button
+                          key={m.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => setDeliveryMethod(m.value)}
+                          className={`text-left p-4 border transition-colors ${
+                            active
+                              ? "border-amber-500 bg-amber-500/[0.06]"
+                              : "border-[#242320] hover:border-amber-500/40"
+                          }`}
+                        >
+                          <p className="text-sm mb-1">{m.label}</p>
+                          <p className="text-xs text-[#8a8478]">{m.description}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {!delivers && (
+                <div className="p-4 border border-[#242320] bg-[#1a1918] space-y-2 text-sm">
+                  <p className="text-xs font-medium tracking-wider uppercase text-amber-400">
+                    {deliveryMethod === "pickup" ? "Collect from" : "Your rider collects from"}
+                  </p>
+                  {pickup?.address ? (
+                    <p className="whitespace-pre-line">{pickup.address}</p>
+                  ) : (
+                    <p className="text-[#8a8478]">Our shop. We&apos;ll confirm the address by email.</p>
+                  )}
+                  {pickup && pickup.openingHours.length > 0 && (
+                    <ul className="text-xs text-[#8a8478] space-y-0.5">
+                      {pickup.openingHours.map((h) => (
+                        <li key={h}>{h}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {pickup?.mapUrl && (
+                    <a
+                      href={pickup.mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      Get directions
+                    </a>
+                  )}
+                  {pickup?.instructions && (
+                    <p className="text-xs text-[#8a8478] whitespace-pre-line">{pickup.instructions}</p>
+                  )}
+                  <p className="text-xs text-[#8a8478]">
+                    Pay online now. We&apos;ll email you when your order is ready to collect.
+                  </p>
+                </div>
+              )}
+
+              {deliveryMethod === "self_arranged" && (
+                <div>
+                  <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
+                    Note for the shop (optional)
+                  </label>
+                  <textarea
+                    value={deliveryNote}
+                    onChange={(e) => setDeliveryNote(e.target.value)}
+                    maxLength={500}
+                    rows={2}
+                    placeholder="Who is collecting, and roughly when"
+                    className="w-full px-4 py-3 bg-[#1a1918] border border-[#242320] text-sm font-light text-[#f5f0e8] placeholder:text-[#8a8478]/50 outline-none focus:border-amber-500 transition-colors"
+                  />
+                </div>
+              )}
+
               {/* Saved address book — choose one or add a new address */}
-              {savedAddresses.length > 0 && (
+              {delivers && savedAddresses.length > 0 && (
                 <div>
                   <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
                     Deliver To
@@ -620,7 +745,7 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {(addressMode === "new" || savedAddresses.length === 0) && (
+              {delivers && (addressMode === "new" || savedAddresses.length === 0) && (
                 <>
                   <div>
                     <label className="text-xs font-medium tracking-wider uppercase text-[#8a8478] mb-1.5 block">
@@ -841,7 +966,7 @@ export default function CheckoutPage() {
                         </span>
                       </button>
                     )}
-                    {codEnabled && (
+                    {codEnabled && delivers && (
                       <button
                         onClick={() => setProvider(COD_METHOD_VALUE)}
                         className={`p-4 border text-center transition-colors ${
@@ -1121,21 +1246,35 @@ export default function CheckoutPage() {
             ) : (
               <p className="text-sm text-[#8a8478] max-w-md mx-auto mb-8 leading-relaxed">
                 Thank you for shopping with Ajabu Lighting. We&apos;ll send you an
-                email confirmation and notify you when your order ships.
+                email confirmation and notify you when your order{" "}
+                {delivers ? "ships" : "is ready to collect"}.
               </p>
             )}
 
             <div className="bg-[#1a1918] border border-white/[0.03] p-5 max-w-sm mx-auto text-left mb-8">
               <div className="flex items-start gap-3 mb-4">
                 <MapPin className="w-4 h-4 text-[#8a8478] mt-0.5" />
-                <div className="text-sm">
-                  <p>{fullName}</p>
-                  <p className="text-[#8a8478]">{line1}</p>
-                  <p className="text-[#8a8478]">
-                    {city}
-                    {region && `, ${region}`}
-                  </p>
-                </div>
+                {delivers ? (
+                  <div className="text-sm">
+                    <p>{fullName}</p>
+                    <p className="text-[#8a8478]">{line1}</p>
+                    <p className="text-[#8a8478]">
+                      {city}
+                      {region && `, ${region}`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-sm">
+                    <p>
+                      {fullName} ·{" "}
+                      {DELIVERY_METHODS.find((m) => m.value === deliveryMethod)?.label}
+                    </p>
+                    {pickup?.address && (
+                      <p className="text-[#8a8478] whitespace-pre-line">{pickup.address}</p>
+                    )}
+                    <p className="text-[#8a8478]">We&apos;ll email you when it&apos;s ready.</p>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-[#8a8478]" />

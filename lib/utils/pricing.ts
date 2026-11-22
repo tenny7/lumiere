@@ -51,7 +51,8 @@ export type OrderTotals = {
 /**
  * Total = (subtotal − discount) + VAT on that amount + delivery. Each charge is
  * added exactly once. Delivery is free when a coupon grants it or the subtotal
- * reaches the free-delivery threshold.
+ * reaches the free-delivery threshold. There is no fee when the customer
+ * collects the order or sends their own rider.
  */
 export function computeOrderTotals({
   subtotal,
@@ -59,19 +60,22 @@ export function computeOrderTotals({
   couponFreeShipping,
   settings,
   currency,
+  storeDelivers = true,
 }: {
   subtotal: number
   discount: number
   couponFreeShipping: boolean
   settings: PricingSettings
   currency: string
+  /** False for collection or own delivery (lib/orders/delivery.ts). */
+  storeDelivers?: boolean
 }): OrderTotals {
   const goods = Math.max(subtotal - discount, 0)
   const freeByThreshold =
     settings.freeShippingThreshold > 0 &&
     subtotal >= settings.freeShippingThreshold
   const deliveryFee =
-    couponFreeShipping || freeByThreshold ? 0 : settings.deliveryFee
+    !storeDelivers || couponFreeShipping || freeByThreshold ? 0 : settings.deliveryFee
   const taxAmount = roundMoney((goods * settings.taxRate) / 100, currency)
   const total = roundMoney(goods + taxAmount + deliveryFee, currency)
   return { subtotal, discount, deliveryFee, taxAmount, total }

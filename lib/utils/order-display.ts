@@ -4,6 +4,7 @@ import {
   MOMO_MANUAL_VALUE,
   MOMO_PROVIDERS,
 } from "./constants"
+import { collectionStatusLabel } from "@/lib/orders/delivery"
 
 type PaymentLike = { provider_metadata?: unknown } | null | undefined
 
@@ -34,10 +35,18 @@ export function isCodOrder(payments: PaymentLike[] | PaymentLike): boolean {
 
 // Customer-facing order status. A pending Cash-on-Delivery order reads as
 // "Order Placed · Cash on Delivery" instead of a bare "Pending", which can look
-// like the order failed. Every other status uses the normal label.
-export function orderStatusLabel(status: string, cod: boolean): string {
+// like the order failed. Orders the customer collects read "Ready for
+// collection" / "Collected" for shipped / delivered. Every other status uses
+// the normal label.
+export function orderStatusLabel(
+  status: string,
+  cod: boolean,
+  deliveryMethod?: string | null,
+): string {
   if (cod && status === "pending") return "Order Placed · Cash on Delivery"
-  return ORDER_STATUS_LABELS[status] || status
+  return (
+    collectionStatusLabel(status, deliveryMethod) ?? ORDER_STATUS_LABELS[status] ?? status
+  )
 }
 
 // Key to look up in a page's status-colour map (COD pending gets its own green

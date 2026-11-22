@@ -4,6 +4,7 @@ import { sendMail, EMAIL_FROM, EMAIL_REPLY_TO } from "@/lib/mail/client"
 import { notifyAdminsNewOrder } from "@/lib/mail/admin-notify"
 import { createHmac, timingSafeEqual } from "crypto"
 import { renderOrderConfirmationEmail } from "@/lib/emails/render"
+import { collectionDetailsFor } from "@/lib/orders/pickup"
 import { deductStock, redeemCoupon } from "@/lib/orders/fulfilment"
 
 function verifyWebhookSignature(
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { data: order } = await adminDb
       .from("orders")
       .select(
-        "id, order_number, customer_id, subtotal, discount_amount, delivery_fee, tax_amount, total, currency, shipping_address, profiles(email, full_name)",
+        "id, order_number, customer_id, subtotal, discount_amount, delivery_fee, tax_amount, total, currency, shipping_address, delivery_method, delivery_note, profiles(email, full_name)",
       )
       .eq("order_number", externalId)
       .single()
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
                 city: address.city || "",
                 region: address.region || "",
               },
+              collection: await collectionDetailsFor(order),
           })
 
           await sendMail({
