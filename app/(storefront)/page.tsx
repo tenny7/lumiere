@@ -119,8 +119,8 @@ export default async function HomePage() {
   const shopCategories = categoriesWithProducts.slice(0, 6)
 
   return (
-    // Products come right after the hero (order-*): on phones before the
-    // marquee, on computers just after it. Category tiles and the rest follow.
+    // Products come right after the hero, then the category tiles and the
+    // rest (order-*).
     <div className="flex flex-col">
       {/* ═══ HERO ═══ */}
       <section className="order-1 pt-24 pb-8 lg:pt-28 lg:pb-16 lg:min-h-[55vh] flex flex-col justify-center items-center relative overflow-hidden px-4">
@@ -165,24 +165,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ═══ MARQUEE ═══ */}
-      {home.marquee.length > 0 && (
-      <div className="order-3 lg:order-2 py-3.5 border-y border-white/5 overflow-hidden">
-        <div className="flex gap-12 animate-marquee whitespace-nowrap">
-          {/* Listed twice so the scroll loops seamlessly. */}
-          {[...home.marquee, ...home.marquee].map((text, i) => (
-            <span
-              key={i}
-              className="text-[0.65rem] tracking-[0.25em] uppercase text-[#8a8478] flex items-center gap-12"
-            >
-              {text}
-              <span className="text-amber-500 text-[0.5rem]">&#10022;</span>
-            </span>
-          ))}
-        </div>
-      </div>
-      )}
 
       {/* ═══ CATEGORIES ═══ */}
       <section className="order-4 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
@@ -250,7 +232,7 @@ export default async function HomePage() {
       </section>
 
       {/* ═══ FEATURED PRODUCTS ═══ */}
-      <section className="order-2 lg:order-3 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 lg:pt-16 lg:pb-8">
+      <section className="order-2 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 lg:pt-16 lg:pb-8">
         <div className="flex justify-between items-end mb-5 lg:mb-12">
           <div>
             {home.featuredEyebrow && (

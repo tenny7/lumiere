@@ -700,7 +700,7 @@ export default function AdminGuidePage() {
             <InfoTable
               head={["Page", "What you can change"]}
               rows={[
-                ["Home page", "The small heading, the main heading (“Light That Lives”) and subheading, button text, the scrolling banner, section titles."],
+                ["Home page", "The small heading, the main heading (“Light That Lives”) and subheading, button text, section titles."],
                 ["Store promises", "The warranty, delivery, returns and support boxes: icon, title and text. Add, remove or reorder them."],
                 ["Testimonials", "Show or hide them, how many, minimum stars, and whether to show first names."],
                 ["Newsletter", "The sign-up box, the welcome email, sending a newsletter, and the subscriber list."],
